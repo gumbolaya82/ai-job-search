@@ -170,10 +170,8 @@ ai-job-search/
 │   │   ├── notion-sync.md             # /notion-sync one-way pipeline view in a Notion database
 │   │   └── reset.md                   # /reset wipe profile data or documents folder
 │   ├── skills/
-│   │   ├── job-application-assistant/  # Core application skill
+│   │   ├── job-application-assistant/  # Core application skill (shared by all profiles)
 │   │   │   ├── SKILL.md               # Skill definition
-│   │   │   ├── 01-candidate-profile.md # Your education, experience, skills
-│   │   │   ├── 02-behavioral-profile.md# PI/DISC/personality assessment
 │   │   │   ├── 03-writing-style.md    # Tone, structure, do's and don'ts
 │   │   │   ├── 04-job-evaluation.md   # Scoring framework for job fit
 │   │   │   ├── 05-cv-templates.md     # LaTeX CV structure + tailoring rules
@@ -189,8 +187,22 @@ ai-job-search/
 │   ├── jobnet-search/                 # Jobnet.dk (Denmark, government portal)
 │   ├── linkedin-search/               # LinkedIn public job listings (country-agnostic)
 │   └── freehire-search/               # freehire.dev tech job aggregator (multi-market, REST API)
+├── .active-profile                    # Which profile is active (gitignored; see .active-profile.example)
+├── profiles/                          # One directory per person — all personal data lives here
+│   ├── _scaffold/                     # Placeholder seed copied by `profile_manager.py create`
+│   ├── archived/<id>/                 # Archived profiles (recoverable, never deleted)
+│   └── <id>/                          # An actual profile
+│       ├── CLAUDE.md                  # This person's candidate profile
+│       ├── 01-candidate-profile.md    # Education, experience, skills
+│       ├── 02-behavioral-profile.md   # PI/DISC/personality assessment
+│       ├── 0{3,4,5,6,7}-*-profile.md  # Profile half of each shared framework doc
+│       ├── search-queries.md          # Job-scraper queries
+│       ├── cv/, cover_letters/        # LaTeX sources + compiled PDFs
+│       ├── documents/, reports/, upskill/, gmail_sync/, job_scraper/
+│       ├── job_search_tracker.csv, salary_data.json
+│       └── .lock                      # Present only while /scrape or /apply runs
 ├── cv/
-│   └── main_example.tex               # moderncv LaTeX template
+│   └── main_example.tex               # moderncv LaTeX template (CI fixture + scaffold seed)
 ├── cover_letters/
 │   ├── cover.cls                      # Custom cover letter LaTeX class
 │   ├── cover_example.tex              # Example cover letter (structural reference + CI smoke test)
@@ -243,19 +255,55 @@ All claims in the CV and cover letter are verified against your actual profile. 
 
 ## Customization
 
+### Managing profiles
+
+One repo can run several people's job searches side by side. All personal data lives
+under `profiles/<id>/`, and the repo-root file `.active-profile` names the one commands
+operate on.
+
+```bash
+python tools/profile_manager.py list             # show every profile, active one marked *
+python tools/profile_manager.py create alice     # new profile, seeded from profiles/_scaffold/
+python tools/profile_manager.py switch alice     # point .active-profile at alice
+python tools/profile_manager.py archive alice    # move to profiles/archived/alice/ (recoverable)
+python tools/profile_manager.py restore alice    # bring it back
+```
+
+`.active-profile` is gitignored — it is your local state, not shared config. A fresh
+clone starts from `.active-profile.example` (which names `_scaffold`), so you must
+`create` and `switch` deliberately before doing real work.
+
+While `/scrape` or `/apply` is running, that profile holds a `.lock` file and `switch`
+refuses to move — otherwise a mid-run switch would send the rest of the command's writes
+into the wrong profile. If a command crashes and leaves the lock behind:
+
+```bash
+python tools/profile_manager.py clear-lock alice
+```
+
 ### Which files to edit manually
 
-If you prefer editing files directly instead of using `/setup`:
+If you prefer editing files directly instead of using `/setup`. Paths marked
+`profiles/<id>/` belong to one person; the rest are shared by every profile:
 
 | File | What to change |
 |------|---------------|
-| `CLAUDE.md` | Your full profile (name, education, experience, skills, goals) |
-| `01-candidate-profile.md` | Structured version of your CV data |
-| `02-behavioral-profile.md` | Your behavioral assessment or self-assessment |
-| `04-job-evaluation.md` | Skill match areas, career goals, motivation filters |
-| `05-cv-templates.md` | Profile statement templates for different role types |
-| `07-interview-prep.md` | Your STAR examples from actual experience |
-| `search-queries.md` | Job search queries for your skills and location |
+| `profiles/<id>/CLAUDE.md` | Your full profile (name, education, experience, skills, goals) |
+| `profiles/<id>/01-candidate-profile.md` | Structured version of your CV data |
+| `profiles/<id>/02-behavioral-profile.md` | Your behavioral assessment or self-assessment |
+| `profiles/<id>/04-job-evaluation-profile.md` | Skill match areas, career goals, motivation filters |
+| `profiles/<id>/05-cv-templates-profile.md` | Profile statement templates for different role types |
+| `profiles/<id>/07-interview-prep-profile.md` | Your STAR examples from actual experience |
+| `profiles/<id>/search-queries.md` | Job search queries for your skills and location |
+| `04-job-evaluation.md` | The scoring framework and thresholds (shared) |
+| `05-cv-templates.md` | LaTeX CV structure and tailoring rules (shared) |
+| `07-interview-prep.md` | Interview framework and tough-question guidance (shared) |
+
+Files `04`, `05` and `07` come in pairs. The shared file carries the method and marks
+where your content belongs with `<!-- BEGIN PROFILE-EXTENSION-POINT -->`; the
+`profiles/<id>/` file carries the content. Keep the markers intact — `/setup`,
+`/reset` and `/add-template` use them to edit one block without touching its
+neighbours, and `python tools/lint_skills.py` fails the build if they get unbalanced.
 
 ### Updating your search queries
 

@@ -8,6 +8,15 @@ Follow these steps **in order**.
 
 ---
 
+## Active Profile (resolve before anything else)
+
+Read `.active-profile` at the repo root and bind `<profile>` to its contents. Every
+`profiles/<profile>/...` path below resolves against it. If `.active-profile` is
+missing, or names a directory that does not exist under `profiles/`, stop and tell
+the user to run `python tools/profile_manager.py list`.
+
+---
+
 ## Step 0: Parse Arguments
 
 - If `$ARGUMENTS` contains `--list`: run **List Mode** below and stop.
@@ -156,7 +165,7 @@ Insert (or replace, if one exists) this block immediately after the file's H1 ti
 > - **Compile with:** `<engine>` (not the engine named in the stock guidance below)
 > - **Fonts:** <font summary, including any Path note for bundled fonts>
 > - **Page limit:** exactly <N> page(s)
-> - **Output file:** unchanged (`cv/main_<company>_<role>.tex` / `cover_letters/cover_<company>_<role>.tex`); copy any class/font files the template needs into the output directory, or reference them by relative path
+> - **Output file:** unchanged (`profiles/<profile>/cv/main_<company>_<role>.tex` / `profiles/<profile>/cover_letters/cover_<company>_<role>.tex`); copy any class/font files the template needs into the output directory, or reference them by relative path
 <!-- END ACTIVE-TEMPLATE -->
 ```
 

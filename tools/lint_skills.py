@@ -77,6 +77,65 @@ def check_command(path: Path) -> None:
         errors.append(f"{rel(path)}: command file must start with a '# /<name>' title (found: {first[:50]!r})")
 
 
+# Managed-block markers. Commands and the web app edit files by replacing the
+# span between a matching BEGIN/END pair, so an unbalanced or duplicated pair
+# silently turns a targeted edit into the wrong edit - or no edit at all.
+#
+# A marker name is either a CONTAINER (e.g. PROFILE-EXTENSION-POINT) or an ITEM
+# (a container-style name plus `:<id>`, e.g. TEMPLATE:primary-role, STAR:2).
+# The BEGIN form may carry trailing prose - `<!-- BEGIN ACTIVE-TEMPLATE (managed
+# by /add-template) -->` - which is part of the shipped convention.
+MARKER_RE = re.compile(
+    r"<!--\s*(BEGIN|END)\s+([A-Z][A-Z0-9-]*(?::[A-Za-z0-9._-]+)?)(?:\s[^>]*?)?\s*-->"
+)
+
+
+def check_markers(path: Path) -> None:
+    """Verify BEGIN/END marker pairs are balanced, unique and sanely nested.
+
+    Item markers may sit inside one container - that is how a profile fragment
+    exposes both "replace the whole extension point" and "replace just STAR:2".
+    Anything deeper, or a container inside a container, is a mistake.
+    """
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        errors.append(f"{rel(path)}: unreadable: {exc}")
+        return
+    stack: list[str] = []
+    seen: set[str] = set()
+    for match in MARKER_RE.finditer(text):
+        kind, name = match.group(1), match.group(2)
+        line = text.count("\n", 0, match.start()) + 1
+        if kind == "BEGIN":
+            if stack and not (len(stack) == 1 and ":" in name and ":" not in stack[0]):
+                errors.append(
+                    f"{rel(path)}:{line}: marker {name!r} opens inside {stack[-1]!r} - "
+                    "only an item marker (NAME:<id>) may nest, and only one level "
+                    "deep inside a container"
+                )
+            if name in seen:
+                errors.append(
+                    f"{rel(path)}:{line}: duplicate marker name {name!r} - a replace "
+                    "targeting this name cannot tell the two blocks apart"
+                )
+            seen.add(name)
+            stack.append(name)
+        else:
+            if not stack:
+                errors.append(f"{rel(path)}:{line}: END {name!r} with no matching BEGIN")
+            elif stack[-1] != name:
+                errors.append(
+                    f"{rel(path)}:{line}: END {name!r} closes {stack[-1]!r} - "
+                    "markers must nest strictly or not at all"
+                )
+                stack.pop()
+            else:
+                stack.pop()
+    for name in stack:
+        errors.append(f"{rel(path)}: BEGIN {name!r} is never closed")
+
+
 def check_settings() -> None:
     path = ROOT / ".claude" / "settings.json"
     try:
@@ -103,10 +162,25 @@ def main() -> int:
     if not commands:
         errors.append("no command files found under .claude/commands/")
 
+    # Every markdown file that a command, /add-template or the profile manager
+    # may edit by marker - the shared framework docs, the profile fragments,
+    # and root CLAUDE.md's ACTIVE-PROFILE block.
+    marked = (
+        skills
+        + commands
+        + sorted(ROOT.glob(".claude/skills/*/[0-9][0-9]-*.md"))
+        + sorted(ROOT.glob("profiles/*/*.md"))
+        + sorted(ROOT.glob("profiles/archived/*/*.md"))
+        + [ROOT / "CLAUDE.md"]
+    )
+
     for skill in skills:
         check_skill(skill)
     for command in commands:
         check_command(command)
+    for path in marked:
+        if path.is_file():
+            check_markers(path)
     check_settings()
 
     if errors:
@@ -114,7 +188,10 @@ def main() -> int:
         for err in errors:
             print(f"  - {err}")
         return 1
-    print(f"lint_skills: OK ({len(skills)} skills, {len(commands)} commands, settings.json)")
+    print(
+        f"lint_skills: OK ({len(skills)} skills, {len(commands)} commands, "
+        f"{sum(1 for p in marked if p.is_file())} marker-checked files, settings.json)"
+    )
     return 0
 
 

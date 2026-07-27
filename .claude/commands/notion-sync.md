@@ -1,8 +1,17 @@
 # /notion-sync - Push Ranked Jobs and Applications to a Notion Database
 
-You are publishing a **read-only view** of the job search into the user's Notion workspace: one database row per job, with a detailed page per shortlisted match. The repo files stay the system of record - `job_scraper/seen_jobs.json` owns scraped/ranked jobs and `job_search_tracker.csv` owns applications. Notion is a disposable presentation layer on top of them; nothing ever syncs back.
+You are publishing a **read-only view** of the job search into the user's Notion workspace: one database row per job, with a detailed page per shortlisted match. The repo files stay the system of record - `profiles/<profile>/job_scraper/seen_jobs.json` owns scraped/ranked jobs and `profiles/<profile>/job_search_tracker.csv` owns applications. Notion is a disposable presentation layer on top of them; nothing ever syncs back.
 
 This command requires the **Notion MCP server** (OAuth). It reads state, upserts pages, and stops - it never ranks, applies, or edits repo files. Notion is the in-tree reference binding; the sync contract itself is tool-agnostic (see "Adapting to Another Tool" at the end - only the two sections marked *(Notion binding)* are tool-specific).
+
+## Active Profile (resolve before anything else)
+
+Read `.active-profile` at the repo root and bind `<profile>` to its contents. Every
+`profiles/<profile>/...` path below resolves against it. If `.active-profile` is
+missing, or names a directory that does not exist under `profiles/`, stop and tell
+the user to run `python tools/profile_manager.py list`.
+
+---
 
 ## Lane: `/html-report` vs `/notion-sync`
 
@@ -38,7 +47,7 @@ The command is **silently optional**: when the destination is not reachable, the
 
 Validate the cheap, local precondition before creating anything external. A run with nothing to sync must exit with **zero side effects** - no database created, no state file written.
 
-1. Read `job_scraper/seen_jobs.json` and `job_search_tracker.csv` (either may be missing).
+1. Read `profiles/<profile>/job_scraper/seen_jobs.json` and `profiles/<profile>/job_search_tracker.csv` (either may be missing).
 2. Select `seen_jobs.json` entries with status `ranked` whose `rank_score` meets the threshold from Step 0. `--all` lifts the threshold entirely.
 3. Every tracker row joins the sync set (an applied-to job always syncs, ranked or not), matched to `seen_jobs.json` entries case-insensitively on company + role where possible. Tracker rows with no `seen_jobs.json` entry sync too - build their Key as `<company>_<role>` lowercased with underscores.
 4. **Status precedence:** the tracker wins. A job that is `ranked` in `seen_jobs.json` but `interview` in the tracker syncs as `interview`. Jobs only in `seen_jobs.json` keep their stored status.
@@ -49,12 +58,29 @@ Validate the cheap, local precondition before creating anything external. A run 
 
 ## Step 3: Load Sync State and Locate the Database *(Notion binding)*
 
-1. Read `job_scraper/notion_sync.json`. Structure:
+1. Read `profiles/<profile>/job_scraper/notion_sync.json`. Structure:
    ```json
    { "database_id": "...", "database_url": "...", "last_sync": "YYYY-MM-DD" }
    ```
 2. If it exists, verify the database id still resolves in Notion. If the database was deleted, treat this as a first run.
-3. **First run:** search the workspace for a database named "Job Search Pipeline". If none exists, ask the user where to create it (top-level page or an existing page they name), then create it with exactly these properties:
+3. **First run:** search the workspace for a database named exactly "Job Search Pipeline".
+
+   **If one exists, stop — do not sync into it.** Every profile in this repo defaults
+   to the same database name, so a pre-existing "Job Search Pipeline" almost certainly
+   belongs to a *different* profile. Syncing would merge two people's job searches into
+   one database, and because this command never syncs back, the damage is invisible
+   from the repo side. This is a hard error, not a warning:
+
+   > A Notion database named "Job Search Pipeline" already exists, but profile
+   > `<profile>` has no sync record for it. It most likely belongs to another profile.
+   > Rename the existing database to include its profile id (e.g. "Job Search Pipeline
+   > — <other-profile-id>"), then re-run `/notion-sync`.
+
+   Two cases are *not* collisions and proceed normally: no such database exists, or
+   `notion_sync.json` already records this exact database id (this profile's own
+   database from an earlier run).
+
+   If none exists, ask the user where to create it (top-level page or an existing page they name), then create it with exactly these properties:
 
    | Property | Type | Values / notes |
    |----------|------|----------------|
@@ -77,7 +103,7 @@ Validate the cheap, local precondition before creating anything external. A run 
    The tracker-sourced properties (Applied on, Channel, CV file, Cover letter) stay empty for jobs that have no tracker row - they fill in once `/outcome` records the application. Only filenames ever sync; document contents stay local.
 
 4. **Existing database with missing properties:** if the located database predates a schema addition (a property from the table above does not exist), add the missing properties to the database before upserting. Never remove or retype existing properties.
-5. Write `job_scraper/notion_sync.json` with the database id and URL. This file is personal state and is gitignored - never commit it.
+5. Write `profiles/<profile>/job_scraper/notion_sync.json` with the database id and URL. This file is personal state and is gitignored - never commit it.
 
 ---
 
@@ -100,7 +126,7 @@ The page body is what makes a row worth clicking. Build it **only from stored da
 
 1. **Fit summary** - a short section from `seen_jobs.json` fields: score, verdict, quick-fit level, first-seen and ranked dates. If the job is in the tracker, add the application timeline (date applied, channel, current status, dated notes from the `notes` column) and name the submitted documents from `cv_file`/`cover_letter_file` (filenames only - the documents themselves never sync).
 2. **The posting** - WebFetch the job URL and write a readable digest: what the role is, key requirements, practical details (location, deadline, salary if stated). If the fetch fails or redirects to a listing page, write "Posting no longer available (checked YYYY-MM-DD)" - **never reconstruct a posting from memory**.
-3. **Links** - the posting URL; if `documents/applications/<company>_<role>/` exists locally, name it as the local archive path (plain text - the destination cannot link into the filesystem).
+3. **Links** - the posting URL; if `profiles/<profile>/documents/applications/<company>_<role>/` exists locally, name it as the local archive path (plain text - the destination cannot link into the filesystem).
 
 Keep the page under ~40 blocks; this is a briefing, not a mirror of the posting.
 
@@ -133,7 +159,7 @@ Remind the user once (first run only): the repo files remain the source of truth
 3. **Page bodies are write-once.** Property updates keep rows current; bodies belong to the user after creation. Only `--rebuild` may rewrite them, and it says so before doing it.
 4. **Never fabricate.** A dead posting URL gets an explicit "unavailable" note, not a reconstruction. Every page claim traces to stored state or fetched content.
 5. **Job data only.** The candidate profile, behavioral notes, and evaluation framework never sync - this is a pipeline view, not a profile export.
-6. **Documents never leave the machine.** CVs and cover letters sync as **filenames only** - never upload, attach, or embed the documents themselves, nor HTML/text renditions of their content, into the destination. The local repo and `documents/applications/` archive are the only home for application documents; the row's page names them so the user knows what to open locally.
+6. **Documents never leave the machine.** CVs and cover letters sync as **filenames only** - never upload, attach, or embed the documents themselves, nor HTML/text renditions of their content, into the destination. The local repo and `profiles/<profile>/documents/applications/` archive are the only home for application documents; the row's page names them so the user knows what to open locally.
 
 ---
 

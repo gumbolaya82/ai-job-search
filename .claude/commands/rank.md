@@ -8,11 +8,20 @@ Follow these steps **in order**.
 
 ---
 
+## Active Profile (resolve before anything else)
+
+Read `.active-profile` at the repo root and bind `<profile>` to its contents. Every
+`profiles/<profile>/...` path below resolves against it. If `.active-profile` is
+missing, or names a directory that does not exist under `profiles/`, stop and tell
+the user to run `python tools/profile_manager.py list`.
+
+---
+
 ## Step 0: Parse Input
 
 `$ARGUMENTS` may contain:
 
-- Nothing → rank all jobs with status `new` in `job_scraper/seen_jobs.json`
+- Nothing → rank all jobs with status `new` in `profiles/<profile>/job_scraper/seen_jobs.json`
 - A focus area (e.g. `/rank data science`) → rank only jobs whose title or stored fit-notes match the focus
 - `--all` → re-rank every job that has not been applied to, including previously ranked ones (useful after the profile changes)
 - `--top <N>` → shortlist size (default 5)
@@ -21,13 +30,13 @@ Follow these steps **in order**.
 
 ## Step 1: Load State
 
-1. Read `job_scraper/seen_jobs.json`. If the file is missing or has no entries, tell the user to run `/scrape` first and stop.
-2. Read `job_search_tracker.csv`. Build the exclusion set: any company+role already in the tracker is out of scope regardless of flags - it has been applied to or consciously tracked.
+1. Read `profiles/<profile>/job_scraper/seen_jobs.json`. If the file is missing or has no entries, tell the user to run `/scrape` first and stop.
+2. Read `profiles/<profile>/job_search_tracker.csv`. Build the exclusion set: any company+role already in the tracker is out of scope regardless of flags - it has been applied to or consciously tracked.
 3. Select candidates: entries with status `new` (or all non-applied entries with `--all`), minus the exclusion set, filtered by the focus area if one was given.
 4. If no candidates remain, say so ("Nothing new to rank - run /scrape to find fresh postings") and stop.
 5. Read the scoring framework and profile **once**:
    - `.claude/skills/job-application-assistant/04-job-evaluation.md`
-   - `.claude/skills/job-application-assistant/01-candidate-profile.md`
+   - `profiles/<profile>/01-candidate-profile.md`
 
 State how many jobs will be ranked before proceeding.
 
@@ -75,12 +84,12 @@ Sort by overall score (descending), urgency as tiebreaker.
 
 ## Step 4: Update State
 
-Update `job_scraper/seen_jobs.json` in place - these fields are additive to the scraper's schema:
+Update `profiles/<profile>/job_scraper/seen_jobs.json` in place - these fields are additive to the scraper's schema:
 
 - Ranked jobs: set `"status": "ranked"` and add `"rank_score": <overall>`, `"rank_verdict": "<band>"`, `"rank_date": "YYYY-MM-DD"`
 - Dead or past-deadline jobs: set `"status": "expired"`
 
-Do not modify `job_search_tracker.csv` - that file records applications, and `/rank` never applies. Re-running `/rank` is idempotent: already-`ranked` jobs are skipped unless `--all` re-scores them.
+Do not modify `profiles/<profile>/job_search_tracker.csv` - that file records applications, and `/rank` never applies. Re-running `/rank` is idempotent: already-`ranked` jobs are skipped unless `--all` re-scores them.
 
 ---
 

@@ -263,7 +263,17 @@ def main():
         print("Error: openpyxl is required. Install it with: pip install openpyxl", file=sys.stderr)
         sys.exit(1)
 
-    output_path = Path(args.output) if args.output else Path(__file__).parent.parent / "salary_data.json"
+    if args.output:
+        output_path = Path(args.output)
+    else:
+        # Default into the active profile, matching salary_lookup.py's resolution.
+        repo_root = Path(__file__).resolve().parent.parent
+        try:
+            active = (repo_root / ".active-profile").read_text(encoding="utf-8").strip()
+        except OSError:
+            active = ""
+        output_path = repo_root / "profiles" / (active or "_scaffold") / "salary_data.json"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
 
     print(f"Reading: {excel_path}")
     wb = openpyxl.load_workbook(excel_path, read_only=True, data_only=True)

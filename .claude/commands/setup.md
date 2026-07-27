@@ -6,6 +6,15 @@ There are three paths into setup. Step 0 picks the right one; all three converge
 
 ---
 
+## Active Profile (resolve before anything else)
+
+Read `.active-profile` at the repo root and bind `<profile>` to its contents. Every
+`profiles/<profile>/...` path below resolves against it. If `.active-profile` is
+missing, or names a directory that does not exist under `profiles/`, stop and tell
+the user to run `python tools/profile_manager.py list`.
+
+---
+
 ## Step 0: Welcome & Choose Path
 
 If `$ARGUMENTS` contains `--section <name>`, skip directly to that section in Path C for an update-only flow. Do not run the path-selection prompt below.
@@ -78,8 +87,8 @@ If every subfolder is empty, stop and tell the user to populate the folder. Poin
 
 Read these in parallel before extracting anything. You must know what is already there to make the merge intelligent.
 
-- `.claude/skills/job-application-assistant/01-candidate-profile.md`
-- `.claude/skills/job-application-assistant/02-behavioral-profile.md`
+- `profiles/<profile>/01-candidate-profile.md`
+- `profiles/<profile>/02-behavioral-profile.md`
 - `.claude/skills/job-application-assistant/03-writing-style.md`
 - `.claude/skills/job-application-assistant/04-job-evaluation.md`
 - `.claude/skills/job-application-assistant/05-cv-templates.md`
@@ -222,7 +231,7 @@ Documents cover skills, experience, education, references, and behavioral signal
 - Commute or location constraints (if not visible from CV)
 - Job search configuration (use the questions from Path C Section 9 below)
 
-Then proceed to Step 3 to populate the non-skill files (`CLAUDE.md`, `cv/main_example.tex`, `.claude/skills/job-scraper/search-queries.md`). Step 3 will detect that the seven skill files are already populated and skip those substeps.
+Then proceed to Step 3 to populate the non-skill files (`CLAUDE.md`, `profiles/<profile>/cv/main_example.tex`, `profiles/<profile>/search-queries.md`). Step 3 will detect that the seven skill files are already populated and skip those substeps.
 
 ---
 
@@ -352,10 +361,10 @@ Add role-specific profile statement templates based on their background.
 ### 6. Update `07-interview-prep.md` *(Path B and C; skip if Path A populated it)*
 Create STAR examples from their actual experience (at least 3-4 examples). Path A leaves STAR stubs under "## STAR Candidates (Complete Manually)" rather than full examples; if any stubs are present, mention them in Step 4 so the user knows to flesh them out.
 
-### 7. Update `cv/main_example.tex`
+### 7. Update `profiles/<profile>/cv/main_example.tex`
 Replace placeholder personal data with their actual name, contact info, and add their education and most recent experience entries.
 
-### 8. Generate `.claude/skills/job-scraper/search-queries.md`
+### 8. Generate `profiles/<profile>/search-queries.md`
 Replace all placeholder tokens in the search queries file with the user's actual information from Section 9 (or the equivalent follow-up questions in Path A's Step A7):
 - Replace `[YOUR_PRIMARY_ROLE_TYPE]`, `[YOUR_PRIMARY_JOB_TITLE]`, etc. with actual role titles
 - Replace `[YOUR_KEY_SKILL]`, `[YOUR_DOMAIN_KEYWORD_1]`, etc. with actual skills and domain terms
@@ -375,14 +384,14 @@ Present a summary:
 
 > **Setup complete!** Here's what was generated:
 >
-> - `CLAUDE.md` - Your full candidate profile
-> - `.claude/skills/job-application-assistant/01-candidate-profile.md` - Structured profile
-> - `.claude/skills/job-application-assistant/02-behavioral-profile.md` - Behavioral assessment
+> - `profiles/<profile>/CLAUDE.md` - Your full candidate profile
+> - `profiles/<profile>/01-candidate-profile.md` - Structured profile
+> - `profiles/<profile>/02-behavioral-profile.md` - Behavioral assessment
 > - `.claude/skills/job-application-assistant/04-job-evaluation.md` - Personalized evaluation framework
 > - `.claude/skills/job-application-assistant/05-cv-templates.md` - CV templates with your profile statements
 > - `.claude/skills/job-application-assistant/07-interview-prep.md` - STAR examples from your experience
-> - `cv/main_example.tex` - Your LaTeX CV template
-> - `.claude/skills/job-scraper/search-queries.md` - Job search queries for `/scrape`
+> - `profiles/<profile>/cv/main_example.tex` - Your LaTeX CV template
+> - `profiles/<profile>/search-queries.md` - Job search queries for `/scrape`
 >
 > **Try it out:**
 > - Run `/scrape` to search for matching jobs right now

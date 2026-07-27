@@ -70,6 +70,8 @@ jobs:
         with:
           python-version: "3.12"
       - run: python -m unittest discover -s tests -t . -v
+      - name: Profile isolation smoke test
+        run: python tools/smoke_test_profiles.py
 
   dependency-review:
     name: Dependency review (upstream PRs only)
@@ -108,6 +110,20 @@ jobs:
     container: texlive/texlive:latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Scaffold fixtures must match the root CI fixtures
+        # profiles/_scaffold/ seeds every new profile, and this job only ever
+        # compiles the root copies. Without this check the scaffold could drift
+        # into something that no longer compiles and nobody would find out until
+        # a user ran `profile_manager.py create`.
+        run: |
+          fail=0
+          for pair in "cv/main_example.tex" "cover_letters/cover_example.tex"; do
+            if ! diff -u "$pair" "profiles/_scaffold/$pair"; then
+              echo "::error file=profiles/_scaffold/$pair::Scaffold fixture out of sync — update profiles/_scaffold/$pair to match the root CI fixture"
+              fail=1
+            fi
+          done
+          exit $fail
       - name: Install PDF inspection tools
         run: |
           if ! command -v pdfinfo >/dev/null || ! command -v pdftotext >/dev/null; then
@@ -194,9 +210,20 @@ jobs:
               fail=1
             fi
           }
-          check CLAUDE.md '\[YOUR_NAME\]'
+          # Root CLAUDE.md is shared framework text now and holds no candidate
+          # data, so the placeholder tokens live in the scaffold profile - the
+          # copy every new profile is seeded from.
+          check profiles/_scaffold/CLAUDE.md '\[YOUR_NAME\]'
+          check profiles/_scaffold/01-candidate-profile.md '<!-- SETUP'
+          check profiles/_scaffold/02-behavioral-profile.md '<!-- SETUP'
+          check profiles/_scaffold/04-job-evaluation-profile.md '\[YOUR_PRIMARY_SKILLS\]'
+          check profiles/_scaffold/05-cv-templates-profile.md 'BEGIN TEMPLATE:'
+          check profiles/_scaffold/07-interview-prep-profile.md 'BEGIN STAR:'
           check cv/main_example.tex '\[YOUR_NAME\]'
           check cover_letters/cover_example.tex '\[YOUR NAME\]'
-          check .claude/skills/job-application-assistant/01-candidate-profile.md '<!-- SETUP'
-          check .claude/skills/job-application-assistant/04-job-evaluation.md '\[YOUR_PRIMARY_SKILLS\]'
+          # Root CLAUDE.md must NOT regain a candidate profile section.
+          if grep -q '^## Candidate Profile' CLAUDE.md; then
+            echo "::error file=CLAUDE.md::root CLAUDE.md is shared across profiles - candidate data belongs in profiles/<id>/CLAUDE.md"
+            fail=1
+          fi
           exit $fail

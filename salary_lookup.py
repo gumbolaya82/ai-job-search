@@ -24,7 +24,23 @@ import argparse
 import unicodedata
 from pathlib import Path
 
-DATA_FILE = Path(__file__).parent / "salary_data.json"
+ROOT = Path(__file__).resolve().parent
+
+
+def _active_profile() -> str:
+    """Read the active profile id, falling back to the scaffold.
+
+    Resolved here rather than by the caller so the documented invocation
+    (`python salary_lookup.py "Company"`) and the Bash permission allowlist
+    entries stay exactly as they were.
+    """
+    try:
+        return (ROOT / ".active-profile").read_text(encoding="utf-8").strip() or "_scaffold"
+    except OSError:
+        return "_scaffold"
+
+
+DATA_FILE = ROOT / "profiles" / _active_profile() / "salary_data.json"
 
 # Common Danish <-> anglicized spelling variants
 SPELLING_VARIANTS = {

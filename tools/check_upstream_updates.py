@@ -20,9 +20,13 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+# Shared framework files only. The 01/02 candidate files moved to
+# profiles/<id>/ and are personal data now - a fork's copies are expected to
+# diverge from upstream, so tracking them here would report drift every run.
+# profiles/_scaffold/ carries the upstream placeholder versions instead.
 FRAMEWORK_FILES = [
-    ".claude/skills/job-application-assistant/01-candidate-profile.md",
-    ".claude/skills/job-application-assistant/02-behavioral-profile.md",
+    "profiles/_scaffold/01-candidate-profile.md",
+    "profiles/_scaffold/02-behavioral-profile.md",
     ".claude/skills/job-application-assistant/03-writing-style.md",
     ".claude/skills/job-application-assistant/04-job-evaluation.md",
     ".claude/skills/job-application-assistant/05-cv-templates.md",
