@@ -1,5 +1,5 @@
 ---
-framework_version: 1.2.1
+framework_version: 2.0.0
 ---
 
 # CV Templates and Tailoring Guide
@@ -10,14 +10,14 @@ framework_version: 1.2.1
 
 All CVs use the moderncv LaTeX package with the "banking" style and "blue" color scheme.
 
-**Output file:** `cv/main_<company>_<role>.tex`
+**Output file:** `profiles/<profile>/cv/main_<company>_<role>.tex`
 **Compile with:** **lualatex** on MiKTeX/TeX Live. pdflatex often fails on modern MiKTeX installs with `fontawesome5` font-expansion errors; lualatex handles the same sources cleanly.
-**Master reference:** `cv/main_example.tex` (comprehensive CV with all competencies, experience, and achievements - use as source when building targeted CVs)
+**Master reference:** `profiles/<profile>/cv/main_example.tex` (comprehensive CV with all competencies, experience, and achievements - use as source when building targeted CVs)
 
 ### Compile command
 
 ```bash
-cd cv && lualatex -interaction=nonstopmode main_<company>_<role>.tex
+cd profiles/<profile>/cv && lualatex -interaction=nonstopmode main_<company>_<role>.tex
 ```
 
 Expected output: `Output written on main_<company>_<role>.pdf (2 pages, ...)`. Any page count other than 2 is a failure that must be fixed before presenting to the user.
@@ -198,7 +198,7 @@ Restore the highest-relevance item that was previously cut — a CV that ends mi
 Most employers run CVs through an ATS before a human sees them, and the ATS reads the PDF's embedded **text layer**, not the rendered page. A CV can pass visual inspection and still extract as garbage. After the layout passes the compile-and-inspect loop, verify the text layer:
 
 ```bash
-cd cv && pdftotext -layout main_<company>_<role>.pdf main_<company>_<role>.txt
+cd profiles/<profile>/cv && pdftotext -layout main_<company>_<role>.pdf main_<company>_<role>.txt
 ```
 
 `pdftotext` comes from [poppler](https://poppler.freedesktop.org/), not the TeX distribution - it is an **optional** dependency. If it is not installed, skip the mechanical check with a warning and rely on the visual PDF read for keyword coverage.

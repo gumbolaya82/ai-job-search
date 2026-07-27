@@ -20,7 +20,7 @@ the user to run `python tools/profile_manager.py list`.
 Check `$ARGUMENTS` for a scope keyword:
 
 - `profile` — clears candidate profile data from skill files only
-- `documents` — deletes user-provided files from the `documents/` folder only
+- `documents` — deletes user-provided files from the `profiles/<profile>/documents/` folder only
 - `all` — both of the above
 
 If `$ARGUMENTS` is empty or does not contain a recognized scope keyword, ask:
@@ -29,7 +29,7 @@ If `$ARGUMENTS` is empty or does not contain a recognized scope keyword, ask:
 >
 > - **`profile`** — Clears candidate data from the skill files (profile, behavioral, STAR examples, profile statements). The framework structure and writing rules are preserved. Use this to re-run `/setup` from scratch.
 >
-> - **`documents`** — Deletes all files you've placed in the `documents/` folder (CV PDFs, LinkedIn export, diplomas, references, past applications). The folder structure and `README.md` are preserved.
+> - **`documents`** — Deletes all files you've placed in the `profiles/<profile>/documents/` folder (CV PDFs, LinkedIn export, diplomas, references, past applications). The folder structure and `README.md` are preserved.
 >
 > - **`all`** — Both of the above.
 >
@@ -108,7 +108,9 @@ profiles/<profile>/documents/references/
 profiles/<profile>/documents/applications/
   - [subfolder/filename] or "(empty)"
 
-documents/README.md — NOT deleted (instructions file)
+The `.gitkeep` files that hold the folder structure are NOT deleted, and neither is
+the shared `documents/README.md` at the repo root — it documents the layout for every
+profile and is not part of this profile's data.
 ```
 
 If all document subfolders are already empty, state "All document subfolders are already empty — nothing to delete." and skip the confirmation step for this scope.
@@ -199,12 +201,13 @@ After copying, run `python tools/lint_skills.py` to confirm the markers are inta
 For each non-empty document subfolder, delete all files within it using Bash `rm`. Do not delete the folder itself, and do not delete `documents/README.md`.
 
 ```bash
-rm -f profiles/<profile>/documents/cv/*
-rm -f profiles/<profile>/documents/linkedin/*
-rm -f profiles/<profile>/documents/diplomas/*
-rm -f profiles/<profile>/documents/references/*
-rm -rf profiles/<profile>/documents/applications/*/
+find profiles/<profile>/documents -type f ! -name '.gitkeep' -delete
+find profiles/<profile>/documents -mindepth 2 -type d -empty -delete
 ```
+
+`! -name '.gitkeep'` keeps the folder structure intact, and `-mindepth 2` leaves the
+seven top-level subfolders in place while clearing the per-application directories
+nested under `applications/`.
 
 ---
 
@@ -225,10 +228,10 @@ After the reset is complete, report:
 Then tell the user what to do next based on what was reset:
 
 **If profile was reset:**
-> Your candidate profile is now blank. Run `/setup` to repopulate it. The command auto-detects any files in your `documents/` folder and offers to read from there; otherwise it walks you through a CV import or interactive interview.
+> Your candidate profile is now blank. Run `/setup` to repopulate it. The command auto-detects any files in your `profiles/<profile>/documents/` folder and offers to read from there; otherwise it walks you through a CV import or interactive interview.
 
 **If documents were reset:**
-> The `documents/` folder is now empty. Add your career documents and run `/setup` to populate your profile. See `documents/README.md` for instructions on what to put where.
+> The `profiles/<profile>/documents/` folder is now empty. Add your career documents and run `/setup` to populate your profile. See `documents/README.md` for instructions on what to put where.
 
 **If both were reset:**
-> Both your profile files and documents folder are now empty. Add documents to `documents/` (or skip and use the CV import / interview path), then run `/setup`.
+> Both your profile files and documents folder are now empty. Add documents to `profiles/<profile>/documents/` (or skip and use the CV import / interview path), then run `/setup`.

@@ -54,6 +54,13 @@ MARKER_END = "<!-- END ACTIVE-PROFILE -->"
 # Directory names under profiles/ that are not themselves profiles.
 RESERVED_IDS = {"archived", "_scaffold"}
 
+# Containers that hold profiles rather than being one. Never a valid id for any
+# subcommand: `switch archived` would otherwise succeed and point every command
+# at the archive directory, since profiles/archived/ is a real directory as soon
+# as anything has been archived. _scaffold is NOT here - it is a real (if
+# placeholder) profile that you are allowed to switch to.
+CONTAINER_DIRS = {"archived"}
+
 # Conservative slug: no path separators, no leading dot, no "..". Keeps a
 # profile id from escaping the profiles/ directory when it is joined onto a
 # path, including when it arrives from the web app's create form.
@@ -67,12 +74,18 @@ def fail(message: str) -> None:
 
 
 def validate_id(profile_id: str) -> bool:
-    """Check an id is a safe single path segment. Allows reserved names."""
+    """Check an id is a safe single path segment naming a real profile."""
     if not ID_PATTERN.match(profile_id) or ".." in profile_id:
         fail(
             f"invalid profile id {profile_id!r}: use letters, digits, dot, dash and "
             "underscore only, starting with a letter, digit or underscore. A profile "
             "id becomes a directory name under profiles/."
+        )
+        return False
+    if profile_id in CONTAINER_DIRS:
+        fail(
+            f"{profile_id!r} is the directory that holds archived profiles, not a "
+            "profile. Run 'list' to see the real ones."
         )
         return False
     return True

@@ -19,19 +19,19 @@ the user to run `python tools/profile_manager.py list`.
 
 If `$ARGUMENTS` contains `--section <name>`, skip directly to that section in Path C for an update-only flow. Do not run the path-selection prompt below.
 
-Otherwise, before greeting the user, scan the `documents/` folder. Use Glob with `documents/**/*` and count files per subfolder (`cv/`, `linkedin/`, `diplomas/`, `references/`, `applications/`).
+Otherwise, before greeting the user, scan the `profiles/<profile>/documents/` folder. Use Glob with `profiles/<profile>/documents/**/*` and count files per subfolder (`cv/`, `linkedin/`, `diplomas/`, `references/`, `applications/`).
 
 Then welcome the user with a single message that lists three paths. The wording changes based on what was found.
 
-**If `documents/` has files** in one or more subfolders, lead with Path A:
+**If `profiles/<profile>/documents/` has files** in one or more subfolders, lead with Path A:
 
 > **Welcome to the AI Job Search setup!**
 >
 > I'll help you build your professional profile so Claude can evaluate job postings, tailor CVs, write cover letters, and prepare you for interviews.
 >
-> I see files in your `documents/` folder: [list per subfolder, e.g. "2 in cv/, 1 in linkedin/, 3 in references/"]. Three ways to start:
+> I see files in your `profiles/<profile>/documents/` folder: [list per subfolder, e.g. "2 in cv/, 1 in linkedin/, 3 in references/"]. Three ways to start:
 >
-> **Path A: Read my documents folder** (recommended for what you have) - I'll read everything in `documents/`, cross-reference for consistency, and build your profile from real source materials. Idempotent and safe to re-run as you add more documents.
+> **Path A: Read my documents folder** (recommended for what you have) - I'll read everything in `profiles/<profile>/documents/`, cross-reference for consistency, and build your profile from real source materials. Idempotent and safe to re-run as you add more documents.
 >
 > **Path B: Single CV import** - Paste or @-mention a single CV/resume here. I'll extract it and ask follow-up questions for what's missing.
 >
@@ -39,7 +39,7 @@ Then welcome the user with a single message that lists three paths. The wording 
 >
 > Which would you like?
 
-**If `documents/` is empty or missing**, surface Path A as a "do this if you have materials" option:
+**If `profiles/<profile>/documents/` is empty or missing**, surface Path A as a "do this if you have materials" option:
 
 > **Welcome to the AI Job Search setup!**
 >
@@ -47,7 +47,7 @@ Then welcome the user with a single message that lists three paths. The wording 
 >
 > Three ways to start:
 >
-> **Path A: Documents folder** (best signal if you have several materials) - Drop your CV / LinkedIn export / diplomas / reference letters in the `documents/` folder, then say "go". I'll read everything and build your profile from it. See `documents/README.md` for the folder layout.
+> **Path A: Documents folder** (best signal if you have several materials) - Drop your CV / LinkedIn export / diplomas / reference letters in the `profiles/<profile>/documents/` folder, then say "go". I'll read everything and build your profile from it. See `documents/README.md` for the folder layout.
 >
 > **Path B: Single CV import** - Paste or @-mention a single CV/resume here. I'll extract it and ask follow-up questions for what's missing.
 >
@@ -61,13 +61,13 @@ Wait for the user's choice. If they pick A but the folder is still empty, tell t
 
 ## Path A: Documents Folder
 
-Reads structured documents in `documents/`, cross-references them for consistency, and merges extracted data into the seven profile skill files. Read-before-write and idempotent: changes already present will not be proposed again.
+Reads structured documents in `profiles/<profile>/documents/`, cross-references them for consistency, and merges extracted data into the seven profile skill files. Read-before-write and idempotent: changes already present will not be proposed again.
 
 Follow these steps **exactly in order**.
 
 ### Step A1: Inventory
 
-Use Glob with `documents/**/*` to scan the full tree. Print:
+Use Glob with `profiles/<profile>/documents/**/*` to scan the full tree. Print:
 
 ```
 ## Documents Found
@@ -406,7 +406,7 @@ If Path A left any STAR stubs in `07-interview-prep.md`, also note:
 
 ## Design Principles
 
-- Three onboarding paths converge on the same skill files. Step 0 picks the right path based on what's in `documents/`. Steps 3 and 4 are shared.
+- Three onboarding paths converge on the same skill files. Step 0 picks the right path based on what's in `profiles/<profile>/documents/`. Steps 3 and 4 are shared.
 - Path A is read-before-write and idempotent. Re-running it as documents are added does not duplicate or overwrite existing content; conflicts are surfaced for explicit resolution.
 - Path A labels inferred behavioral or style additions so the user can review them critically before relying on them.
 - Each section in Path C is a natural conversation, not a form. The user can skip optional sections.

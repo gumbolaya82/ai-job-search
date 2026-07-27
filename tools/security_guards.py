@@ -65,8 +65,9 @@ REQUIRED_IGNORE_RULES = [
     "**/job_search_tracker.csv",
     # Fork-local, never shared: which profile the CLI is currently pointed at.
     ".active-profile",
-    # Written by /scrape and /apply for the duration of a run.
-    "**/profiles/*/.lock",
+    # Written by /scrape and /apply for the duration of a run. `**` rather than
+    # `*` so archived profiles, one level deeper, are covered too.
+    "profiles/**/.lock",
 ]
 
 # Negation (re-include) rules the template legitimately ships. .gitignore is

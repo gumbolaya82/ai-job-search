@@ -1,5 +1,5 @@
 ---
-framework_version: 1.1.0
+framework_version: 2.0.0
 ---
 
 # Job Evaluation Framework
@@ -104,7 +104,7 @@ profile-specific — read **Career Alignment & Motivation** in
 
 ### 6. Salary Benchmark (Optional)
 
-If the salary lookup tool is configured (`salary_data.json` exists), look up the company:
+If the salary lookup tool is configured (`profiles/<profile>/salary_data.json` exists), look up the company:
 ```
 python salary_lookup.py "<Company Name>" --json
 ```

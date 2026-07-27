@@ -40,7 +40,9 @@ linkedin_Profile.pdf
 
 # Command locks. /scrape and /apply write profiles/<id>/.lock while they run so
 # a mid-run profile switch cannot repoint paths under them; removed when done.
-**/profiles/*/.lock
+# `profiles/**/` (not `profiles/*/`) so archived profiles, which sit one level
+# deeper at profiles/archived/<id>/, are covered by the same rule.
+profiles/**/.lock
 
 # Personal photos and signatures
 *.jpg
@@ -80,8 +82,10 @@ skills-lock.json
 # OpenFonts/ out of the root cover_letters/ fixture so xelatex resolves them as
 # siblings of the .tex it is compiling. Ignoring the copies keeps exactly one
 # set of the ~30 font files in git - the root one.
-profiles/*/cover_letters/cover.cls
-profiles/*/cover_letters/OpenFonts/
+# `profiles/**/` (not `profiles/*/`) so archiving a profile, which moves it down
+# to profiles/archived/<id>/, does not un-ignore its whole font tree.
+profiles/**/cover_letters/cover.cls
+profiles/**/cover_letters/OpenFonts/
 
 # documents/ subfolder contents are personal — only README and folder structure are tracked
 **/documents/cv/**
