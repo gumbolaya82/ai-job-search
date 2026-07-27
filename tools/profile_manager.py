@@ -216,8 +216,12 @@ def sync_claude_md(profile_id: str) -> None:
     warning, not a failure - `switch` must still succeed on a fork that has
     trimmed CLAUDE.md.
     """
+    # newline="" on both read and write: Python's text mode would otherwise
+    # translate the whole file to os.linesep on write, rewriting every line
+    # ending on Windows each time anyone runs `switch`.
     try:
-        content = CLAUDE_MD.read_text(encoding="utf-8")
+        with CLAUDE_MD.open("r", encoding="utf-8", newline="") as handle:
+            content = handle.read()
     except OSError as exc:
         print(f"warning: CLAUDE.md not updated ({exc})")
         return
@@ -229,13 +233,16 @@ def sync_claude_md(profile_id: str) -> None:
         return
     start = content.index(MARKER_BEGIN)
     end = content.index(MARKER_END) + len(MARKER_END)
+    # Match the newline style already in the file rather than imposing one.
+    eol = "\r\n" if "\r\n" in content else "\n"
     block = (
-        f"{MARKER_BEGIN}\n"
+        f"{MARKER_BEGIN}{eol}"
         f"**Active profile:** `{profile_id}` — see "
-        f"[`profiles/{profile_id}/CLAUDE.md`](profiles/{profile_id}/CLAUDE.md)\n"
+        f"[`profiles/{profile_id}/CLAUDE.md`](profiles/{profile_id}/CLAUDE.md){eol}"
         f"{MARKER_END}"
     )
-    CLAUDE_MD.write_text(content[:start] + block + content[end:], encoding="utf-8")
+    with CLAUDE_MD.open("w", encoding="utf-8", newline="") as handle:
+        handle.write(content[:start] + block + content[end:])
 
 
 def cmd_list(args: argparse.Namespace) -> None:
