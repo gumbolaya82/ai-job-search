@@ -47,10 +47,13 @@ class HtmlReportGitignoreTests(unittest.TestCase):
 
     def test_reports_folder_is_gitignored(self):
         rules = {line.strip() for line in GITIGNORE.read_text(encoding="utf-8").splitlines()}
+        # `**/` form: reports/ now lives under profiles/<id>/, and archived
+        # profiles nest it one level deeper still, so a rooted rule would not
+        # match the generated dashboards it is meant to keep out of git.
         self.assertIn(
-            "reports/",
+            "**/reports/",
             rules,
-            "reports/ must be listed in .gitignore — generated dashboards are personal output",
+            "**/reports/ must be listed in .gitignore — generated dashboards are personal output",
         )
 
 

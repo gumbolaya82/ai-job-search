@@ -1,5 +1,5 @@
 ---
-framework_version: 1.1.0
+framework_version: 2.0.0
 ---
 
 # Job Evaluation Framework
@@ -44,9 +44,10 @@ How well do the required/preferred skills align with the candidate's capabilitie
 | 40-59 | Partial match, significant upskilling needed |
 | 0-39 | Fundamental mismatch |
 
-**Strong match areas:** [YOUR_PRIMARY_SKILLS]
-**Moderate match areas:** [YOUR_SECONDARY_SKILLS]
-**Weak match areas:** [SKILLS_YOU_LACK]
+<!-- BEGIN PROFILE-EXTENSION-POINT:skills-match -->
+Match areas are profile-specific — read **Technical Skills Match** in
+`profiles/<profile>/04-job-evaluation-profile.md`.
+<!-- END PROFILE-EXTENSION-POINT:skills-match -->
 
 ### 2. Experience Match (0-100)
 Does work history align with what they're looking for?
@@ -58,9 +59,10 @@ Does work history align with what they're looking for?
 | 40-59 | Adjacent experience, would need to make the case |
 | 0-39 | Unrelated experience |
 
-**Strong:** [YOUR_DIRECT_EXPERIENCE_DOMAINS]
-**Moderate:** [YOUR_ADJACENT_EXPERIENCE]
-**Entry-level:** [ROLES_WITH_LIMITED_EXPERIENCE]
+<!-- BEGIN PROFILE-EXTENSION-POINT:experience-match -->
+Experience domains are profile-specific — read **Experience Match** in
+`profiles/<profile>/04-job-evaluation-profile.md`.
+<!-- END PROFILE-EXTENSION-POINT:experience-match -->
 
 ### 3. Behavioral/Culture Fit (0-100)
 Does the role and company culture match the behavioral profile?
@@ -90,24 +92,19 @@ Does this role advance career goals and contain tasks that energize?
 | 40-59 | Decent job but doesn't build toward career goals |
 | 0-39 | Dead end or backwards step |
 
-**Career goals:**
-- [YOUR_CAREER_GOAL_1]
-- [YOUR_CAREER_GOAL_2]
-- [YOUR_CAREER_GOAL_3]
+**Motivation filter:** Evaluate not just whether the candidate *can* do the tasks, but whether the tasks will *energize* them. Weigh non-task factors too: leadership style, department culture, company values, degree of autonomy.
 
-**Motivation filter:** Evaluate not just whether you *can* do the tasks, but whether the tasks will *energize* you. Consider:
-- Tasks that energize: [YOUR_ENERGIZING_TASKS]
-- Tasks that drain: [YOUR_DRAINING_TASKS]
-- Non-task factors: leadership style, department culture, company values, degree of autonomy
+**Life situation alignment:** Weigh the candidate's personal constraints — financial security, schedule flexibility, and professional-development priorities.
 
-**Life situation alignment:** Consider personal constraints:
-- **Security**: [YOUR_FINANCIAL_SITUATION_CONTEXT]
-- **Flexibility**: [YOUR_SCHEDULE_CONSTRAINTS]
-- **Professional development**: [YOUR_GROWTH_PRIORITIES]
+<!-- BEGIN PROFILE-EXTENSION-POINT:career-alignment -->
+Career goals, the energizing/draining task lists, and life-situation constraints are
+profile-specific — read **Career Alignment & Motivation** in
+`profiles/<profile>/04-job-evaluation-profile.md`.
+<!-- END PROFILE-EXTENSION-POINT:career-alignment -->
 
 ### 6. Salary Benchmark (Optional)
 
-If the salary lookup tool is configured (`salary_data.json` exists), look up the company:
+If the salary lookup tool is configured (`profiles/<profile>/salary_data.json` exists), look up the company:
 ```
 python salary_lookup.py "<Company Name>" --json
 ```

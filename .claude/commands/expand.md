@@ -6,12 +6,21 @@ Follow these steps **exactly in order**. Do not skip steps.
 
 ---
 
+## Active Profile (resolve before anything else)
+
+Read `.active-profile` at the repo root and bind `<profile>` to its contents. Every
+`profiles/<profile>/...` path below resolves against it. If `.active-profile` is
+missing, or names a directory that does not exist under `profiles/`, stop and tell
+the user to run `python tools/profile_manager.py list`.
+
+---
+
 ## Step 0: Read Existing Profile Files
 
 Read these two files in parallel before doing anything else. You must know what is already there so you do not propose duplicates.
 
-- `.claude/skills/job-application-assistant/01-candidate-profile.md`
-- `.claude/skills/job-application-assistant/02-behavioral-profile.md`
+- `profiles/<profile>/01-candidate-profile.md`
+- `profiles/<profile>/02-behavioral-profile.md`
 
 Hold this content in context throughout the command. Do not re-read these files later.
 
@@ -21,30 +30,30 @@ Hold this content in context throughout the command. Do not re-read these files 
 
 Scan every available source for "experience items" — anything that implies skill, knowledge, or competency. Process sources in this order.
 
-### 1a. documents/cv/
-Read all files in `documents/cv/`. Extract:
+### 1a. profiles/<profile>/documents/cv/
+Read all files in `profiles/<profile>/documents/cv/`. Extract:
 - Every course or module listed (including university coursework and online courses)
 - Every certification mentioned, with issuer and date
 - Every job responsibility bullet point (tools, methods, outcomes)
 - Every independent project or side project
 - Every volunteer or extracurricular role
 
-### 1b. documents/linkedin/
-Read all files in `documents/linkedin/`. Extract:
+### 1b. profiles/<profile>/documents/linkedin/
+Read all files in `profiles/<profile>/documents/linkedin/`. Extract:
 - Courses and certifications in the "Licenses & Certifications" section
 - Skills and endorsements list
 - Volunteer experiences
 - Projects section
 - Any platform-specific items not already found in the CV
 
-### 1c. documents/diplomas/
-Read all files in `documents/diplomas/`. Extract:
+### 1c. profiles/<profile>/documents/diplomas/
+Read all files in `profiles/<profile>/documents/diplomas/`. Extract:
 - All course/module names listed on transcripts
 - Thesis title and subject area
 - Any specialisation or track name
 
-### 1d. documents/references/
-Read all files in `documents/references/`. Extract:
+### 1d. profiles/<profile>/documents/references/
+Read all files in `profiles/<profile>/documents/references/`. Extract:
 - Competency language used by the referee (what skills or qualities they mention)
 - Any specific projects, tools, or methods named
 

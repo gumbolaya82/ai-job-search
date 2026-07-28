@@ -11,13 +11,22 @@ allowed-tools: Read, Write, Glob, Grep, WebFetch, WebSearch
 
 ---
 
+## Active Profile (resolve before anything else)
+
+Read `.active-profile` at the repo root and bind `<profile>` to its contents. Every
+`profiles/<profile>/...` path below resolves against it. If `.active-profile` is
+missing, or names a directory that does not exist under `profiles/`, stop and tell
+the user to run `python tools/profile_manager.py list`.
+
+---
+
 ## Overview
 
 `/upskill` analyses jobs you have tracked and your current profile to identify skill gaps, then produces a heatmap of those gaps and a learning plan with concrete, web-searched study resources and a recommended study order.
 
 ## Invocation
 
-- **`/upskill`** — aggregate mode: analyses all jobs in `job_search_tracker.csv`
+- **`/upskill`** — aggregate mode: analyses all jobs in `profiles/<profile>/job_search_tracker.csv`
 - **`/upskill <URL>`** — targeted mode: analyses a single job posting fetched from the URL
 
 ---
@@ -34,16 +43,16 @@ In targeted mode, derive a slug from the job title and company for the report fi
 ## Step 2: Load Data
 
 ### Aggregate mode
-1. Read `job_search_tracker.csv`. Extract all rows. The columns are:
+1. Read `profiles/<profile>/job_search_tracker.csv`. Extract all rows. The columns are:
    `date, company, sector, role, role_type, channel, status, contact_person, fit_rating, notes, cv_file, cover_letter_file, source`
 2. For each row, note the `role`, `company`, and `fit_rating`. The `fit_rating` column is a 0–100 score where 100 = perfect fit. You will use it to weight gaps — a lower fit rating means the role exposed more gaps.
-3. Read `.claude/skills/job-application-assistant/01-candidate-profile.md` to get the candidate's current skills and experience.
-4. Check `upskill/` for the most recent aggregate report file (`report-YYYY-MM-DD.md`) — if one exists, note its date and load it for the diff in Step 8.
+3. Read `profiles/<profile>/01-candidate-profile.md` to get the candidate's current skills and experience.
+4. Check `profiles/<profile>/upskill/` for the most recent aggregate report file (`report-YYYY-MM-DD.md`) — if one exists, note its date and load it for the diff in Step 8.
 
 ### Targeted mode
 1. Use WebFetch to retrieve the job posting from the URL.
 2. Extract: job title, company, required skills, preferred skills, responsibilities, and any domain context.
-3. Read `.claude/skills/job-application-assistant/01-candidate-profile.md` for the candidate's current skills.
+3. Read `profiles/<profile>/01-candidate-profile.md` for the candidate's current skills.
 4. No tracker data is used in targeted mode.
 
 ## Step 3: Pass 1 — Hard Skill Diff
@@ -217,10 +226,10 @@ Study direction: ...
 
 ### Save the report
 
-- **Aggregate:** `upskill/report-YYYY-MM-DD.md`
-- **Targeted:** `upskill/report-YYYY-MM-DD-<company-slug>-<role-slug>.md`
+- **Aggregate:** `profiles/<profile>/upskill/report-YYYY-MM-DD.md`
+- **Targeted:** `profiles/<profile>/upskill/report-YYYY-MM-DD-<company-slug>-<role-slug>.md`
   - Slugify: lowercase, spaces → hyphens, strip special characters
-  - Example: `upskill/report-2026-04-20-guardsix-senior-ai-engineer.md`
+  - Example: `profiles/<profile>/upskill/report-2026-04-20-guardsix-senior-ai-engineer.md`
 
 Use the Write tool to save the file.
 
@@ -235,13 +244,13 @@ If no previous report exists, omit the "Since Last Report" section entirely.
 ### Confirm to user
 
 After saving, print:
-> "Report saved to `upskill/<filename>.md`. Review it anytime to track your learning progress."
+> "Report saved to `profiles/<profile>/upskill/<filename>.md`. Review it anytime to track your learning progress."
 
 ## Important Rules
 
 1. **Never fabricate resources.** Only cite resources found via actual WebSearch results. Do not invent course names, URLs, or authors.
 2. **Search with the current year.** Include the year in every WebSearch query for resources so results stay fresh.
-3. **Targeted mode ignores the tracker.** In targeted mode, analyse only the fetched posting. Do not load or reference `job_search_tracker.csv`.
+3. **Targeted mode ignores the tracker.** In targeted mode, analyse only the fetched posting. Do not load or reference `profiles/<profile>/job_search_tracker.csv`.
 4. **Be generous with profile matching.** If a skill appears in the candidate profile in any form, do not flag it as a gap. Avoid false positives.
 5. **Print the heatmap before the learning plan.** Always show the intermediate heatmap table in the terminal before proceeding to resource search, so the user can see what you are working from.
 6. **Omit Low-priority gaps from the learning plan.** List them in the heatmap for completeness, but do not generate study resources for them unless the user asks.

@@ -1,5 +1,5 @@
 ---
-framework_version: 1.0.0
+framework_version: 2.0.0
 ---
 
 # Interview Preparation Guide
@@ -14,30 +14,23 @@ Keep answers to 1-2 minutes. Be specific. End with what you learned or would do 
 
 ## Ready-Made STAR Examples
 
-<!-- These are populated by /setup from your actual experience. Below are templates showing the format. -->
+Each example follows this shape:
 
-### 1. [PROJECT_NAME] ([SKILL_DEMONSTRATED])
-**S:** [CONTEXT - what was happening, what was the problem]
-**T:** [YOUR RESPONSIBILITY - what you specifically needed to do]
-**A:** [WHAT YOU DID - specific actions, tools, methods]
-**R:** [OUTCOME - measurable results, adoption, impact]
-**Use for:** "[QUESTION_TYPE_1]", "[QUESTION_TYPE_2]"
+```
+### <n>. <PROJECT> (<SKILL DEMONSTRATED>)
+**S:** context - what was happening, what was the problem
+**T:** the candidate's responsibility - what they specifically needed to do
+**A:** what they did - specific actions, tools, methods
+**R:** outcome - measurable results, adoption, impact
+**Use for:** the question types this example answers
+```
 
-### 2. [PROJECT_NAME] ([SKILL_DEMONSTRATED])
-**S:** [CONTEXT]
-**T:** [YOUR RESPONSIBILITY]
-**A:** [WHAT YOU DID]
-**R:** [OUTCOME]
-**Use for:** "[QUESTION_TYPE_1]", "[QUESTION_TYPE_2]"
-
-### 3. [PROJECT_NAME] ([SKILL_DEMONSTRATED])
-**S:** [CONTEXT]
-**T:** [YOUR RESPONSIBILITY]
-**A:** [WHAT YOU DID]
-**R:** [OUTCOME]
-**Use for:** "[QUESTION_TYPE_1]", "[QUESTION_TYPE_2]"
-
-<!-- Add more STAR examples as needed. Aim for 4-6 covering different competencies. -->
+<!-- BEGIN PROFILE-EXTENSION-POINT:star-examples -->
+The examples themselves are profile-specific — read
+`profiles/<profile>/07-interview-prep-profile.md`. Each is wrapped in its own
+`STAR:<n>` marker so `/setup` can add or replace one without disturbing the
+others. Aim for 4-6 covering different competencies.
+<!-- END PROFILE-EXTENSION-POINT:star-examples -->
 
 ## Common Tough Questions
 

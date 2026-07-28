@@ -42,22 +42,32 @@ ALLOWED_PERMISSIONS = {
 }
 
 # Personal-data ignore rules that must never disappear from .gitignore.
+#
+# These carry the depth-independent `**/` prefix because personal data lives
+# under profiles/<id>/ and archived profiles under profiles/archived/<id>/. A
+# repo-rooted rule matches neither, so it would silently stop protecting
+# anything the moment a profile was created.
 REQUIRED_IGNORE_RULES = [
-    "salary_data.json",
-    # Depth-independent: the job-scraper skill resolves `job_scraper/` relative
-    # to its own directory, so the state file lands under .claude/skills/... and
-    # a repo-rooted rule silently fails to match it.
+    "**/salary_data.json",
+    # Depth-independent for a second reason: the job-scraper skill resolves
+    # `job_scraper/` relative to its own directory, so the state file lands
+    # under .claude/skills/... where a repo-rooted rule never matches it.
     "**/job_scraper/seen_jobs.json",
-    "cv/main_*.tex",
+    "**/cv/main_*.tex",
     "!cv/main_example.tex",
-    "cover_letters/cover_*.tex",
-    "documents/cv/**",
-    "documents/linkedin/**",
-    "documents/diplomas/**",
-    "documents/references/**",
-    "documents/applications/**",
-    "documents/interview/**",
-    "job_search_tracker.csv",
+    "**/cover_letters/cover_*.tex",
+    "**/documents/cv/**",
+    "**/documents/linkedin/**",
+    "**/documents/diplomas/**",
+    "**/documents/references/**",
+    "**/documents/applications/**",
+    "**/documents/interview/**",
+    "**/job_search_tracker.csv",
+    # Fork-local, never shared: which profile the CLI is currently pointed at.
+    ".active-profile",
+    # Written by /scrape and /apply for the duration of a run. `**` rather than
+    # `*` so archived profiles, one level deeper, are covered too.
+    "profiles/**/.lock",
 ]
 
 # Negation (re-include) rules the template legitimately ships. .gitignore is
@@ -68,10 +78,20 @@ REQUIRED_IGNORE_RULES = [
 # failure - add an intentional one here in the same PR, exactly as with
 # ALLOWED_PERMISSIONS, so the widening is explicit and reviewable.
 ALLOWED_IGNORE_NEGATIONS = {
+    # Stays rooted on purpose: it re-includes only the shared root font fixture.
+    # Widening it to `**/` would un-ignore the per-profile OpenFonts copies that
+    # profile_manager.py creates, putting ~30 font files per profile into git.
     "!cover_letters/OpenFonts/fonts/**",
+    # Every LaTeX negation names ONE exact path, and must stay that way. A
+    # profile's own cv/main_example.tex is that person's real master CV; a `**/`
+    # negation here would commit it. Only these four paths hold placeholder
+    # fixtures: the two at the repo root, and the two scaffold copies that CI
+    # diffs against them for parity.
     "!cv/main_example.tex",
+    "!profiles/_scaffold/cv/main_example.tex",
     "!cover_letters/cover_example.tex",
-    "!documents/**/.gitkeep",
+    "!profiles/_scaffold/cover_letters/cover_example.tex",
+    "!**/documents/**/.gitkeep",
 }
 
 FORBIDDEN_SCRIPTS = {"preinstall", "install", "postinstall", "prepare", "prepack"}

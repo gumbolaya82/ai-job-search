@@ -24,7 +24,16 @@ import argparse
 import unicodedata
 from pathlib import Path
 
-DATA_FILE = Path(__file__).parent / "salary_data.json"
+ROOT = Path(__file__).resolve().parent
+
+# The pointer is resolved here rather than by the caller so the documented
+# invocation (`python salary_lookup.py "Company"`) and the Bash permission
+# allowlist entries stay exactly as they were. profile_manager owns the id
+# validation - a second copy of that rule here is how the two drift apart.
+sys.path.insert(0, str(ROOT / "tools"))
+from profile_manager import active_profile_dir  # noqa: E402
+
+DATA_FILE = active_profile_dir() / "salary_data.json"
 
 # Common Danish <-> anglicized spelling variants
 SPELLING_VARIANTS = {

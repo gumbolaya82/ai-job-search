@@ -12,6 +12,28 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash(bun --version), Bash(bun run 
 
 ---
 
+## Active Profile (resolve before anything else)
+
+Read `.active-profile` at the repo root and bind `<profile>` to its contents. Every
+`profiles/<profile>/...` path below resolves against it. If `.active-profile` is
+missing, or names a directory that does not exist under `profiles/`, stop and tell
+the user to run `python tools/profile_manager.py list`.
+
+**Then take the lock.** A scrape run spans many portal calls and ends by rewriting
+`seen_jobs.json`; a profile switch partway through would write those results into the
+wrong profile.
+
+1. If `profiles/<profile>/.lock` already exists, stop. Show its contents and tell the
+   user another command is mid-run against this profile — they should wait for it, or
+   run `python tools/profile_manager.py clear-lock <profile>` if it crashed.
+2. Otherwise write `profiles/<profile>/.lock` with a single line: the current UTC time
+   in ISO-8601 followed by the command name, e.g. `2026-07-26T14:32:00Z /scrape`.
+
+Step 7 releases it. If you abort early — no portals configured, every search failing,
+the user cancelling — delete the lock file before you stop.
+
+---
+
 ## How It Works
 
 This skill searches job portals using the **installed portal-search CLIs** in
@@ -38,13 +60,13 @@ Optional arguments:
 
 ### Step 0: Load State
 
-1. Read `job_scraper/seen_jobs.json` (create if missing - start with `{"seen": {}}`)
-2. Read `job_search_tracker.csv` to extract already-applied companies+roles
-3. Read `search-queries.md` (this directory) for the search strategy
+1. Read `profiles/<profile>/job_scraper/seen_jobs.json` (create if missing - start with `{"seen": {}}`)
+2. Read `profiles/<profile>/job_search_tracker.csv` to extract already-applied companies+roles
+3. Read `profiles/<profile>/search-queries.md` for the search strategy
 
 ### Step 1: Search
 
-Read `search-queries.md` (this directory) for the search strategy. By default, run the top 3 priority query categories. If the user said "broad", run all categories. If the user specified a focus area (e.g. "data science"), prioritize queries from that category.
+Read `profiles/<profile>/search-queries.md` for the search strategy. By default, run the top 3 priority query categories. If the user said "broad", run all categories. If the user specified a focus area (e.g. "data science"), prioritize queries from that category.
 
 **Use the installed CLI tools as the primary search mechanism.** Fall back to `WebSearch` only for portals that do not have a CLI skill, or if `bun` is unavailable on the system.
 
@@ -65,7 +87,7 @@ Discover all installed portal CLI skills by reading every `SKILL.md` found under
 For each **enabled** portal skill:
 
 1. Read its `SKILL.md` to find the correct `bun run …` invocation and supported flags.
-2. Translate the query terms from `search-queries.md` into that portal's flag format (e.g. `--key`, `--search-string`, `--query`, filter codes — whatever the portal's SKILL.md specifies).
+2. Translate the query terms from `profiles/<profile>/search-queries.md` into that portal's flag format (e.g. `--key`, `--search-string`, `--query`, filter codes — whatever the portal's SKILL.md specifies).
 3. Scope to the last 14 days using the portal's supported recency flag (`--jobage`, `--since <YYYY-MM-DD>`, `--order PublicationDate`, etc. — as documented per portal).
 4. Cap results to ~20 per call using the portal's limit flag.
 5. Use `--format json` for machine-readable output.
@@ -77,11 +99,11 @@ If a CLI tool exits with a non-zero code, log the error message and continue —
 #### 1c. WebSearch fallback
 
 Use `WebSearch` for:
-- Portals listed in `search-queries.md` that do **not** have a corresponding directory under `.agents/skills/`
+- Portals listed in `profiles/<profile>/search-queries.md` that do **not** have a corresponding directory under `.agents/skills/`
 - Any portal whose CLI fails at runtime
 - When bun is unavailable (Step 1a failed)
 
-Use the site-specific query strings from `search-queries.md` directly as WebSearch queries for these portals.
+Use the site-specific query strings from `profiles/<profile>/search-queries.md` directly as WebSearch queries for these portals.
 
 ### Step 2: Fetch & Parse
 
@@ -97,7 +119,7 @@ fields manually.
 
 For every candidate:
 - Skip if the URL or company+title combo already exists in `seen_jobs.json`
-- Skip if the company+role already appears in `job_search_tracker.csv`
+- Skip if the company+role already appears in `profiles/<profile>/job_search_tracker.csv`
 
 ### Step 3: Quick Fit Assessment
 
@@ -219,14 +241,20 @@ If the run found many new jobs (roughly 8+), also suggest `/rank` - it batch-sco
 
 ### Step 6: Update Tracker (Optional)
 
-If the user decides to apply to any job, add a row to `job_search_tracker.csv`.
+If the user decides to apply to any job, add a row to `profiles/<profile>/job_search_tracker.csv`.
+
+### Step 7: Release the Lock
+
+Delete `profiles/<profile>/.lock`. Do this last, after results are presented, and do it
+even if earlier steps reported problems — a lock left behind blocks every later
+`/scrape` and `/apply` run and forces the user to clear it by hand.
 
 ---
 
 ## Important Rules
 
 1. **Never fabricate job postings.** Only present jobs from actual CLI search/detail output or WebSearch/WebFetch results.
-2. **Respect deduplication.** Always check seen_jobs.json AND job_search_tracker.csv before presenting.
+2. **Respect deduplication.** Always check seen_jobs.json AND profiles/<profile>/job_search_tracker.csv before presenting.
 3. **Focus on configured geographic area.** Skip jobs that require relocation or are clearly outside commute range.
 4. **Only open positions.** Skip postings with expired deadlines or those marked as closed.
 5. **Be efficient with detail fetches.** Don't run `detail` or WebFetch on every search hit — pre-filter by title/snippet, then fetch only promising matches.
