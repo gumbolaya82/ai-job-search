@@ -99,7 +99,9 @@ def main() -> int:
 
     original_active = None
     if ACTIVE_FILE.exists():
-        original_active = ACTIVE_FILE.read_text(encoding="utf-8").strip() or None
+        # utf-8-sig to match profile_manager.read_active(): a pointer saved with
+        # a BOM would otherwise read as '﻿<id>' here and abort the run.
+        original_active = ACTIVE_FILE.read_text(encoding="utf-8-sig").strip() or None
     if original_active is None:
         # Nothing to protect and nothing to restore; seed the scaffold so the
         # rest of the run has a baseline profile to switch back to.

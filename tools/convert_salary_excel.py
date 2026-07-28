@@ -13,7 +13,8 @@ Usage:
     python tools/convert_salary_excel.py <path-to-excel-file> --source "My Union Stats 2025"
     python tools/convert_salary_excel.py <path-to-excel-file> --baseline 100 --baseline-desc "Index 100 = median salary"
 
-The output file (salary_data.json) will be written to the repository root.
+The output file (salary_data.json) is written into the active profile,
+`profiles/<id>/salary_data.json`, unless --output overrides it.
 
 Expected Excel format:
     - A header row with column names
@@ -266,13 +267,14 @@ def main():
     if args.output:
         output_path = Path(args.output)
     else:
-        # Default into the active profile, matching salary_lookup.py's resolution.
-        repo_root = Path(__file__).resolve().parent.parent
-        try:
-            active = (repo_root / ".active-profile").read_text(encoding="utf-8").strip()
-        except OSError:
-            active = ""
-        output_path = repo_root / "profiles" / (active or "_scaffold") / "salary_data.json"
+        # Default into the active profile, via the same validated resolver
+        # salary_lookup.py uses. The mkdir below is why the id must be checked:
+        # an unvalidated pointer would let it create directories outside the
+        # repo entirely.
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from profile_manager import active_profile_dir
+
+        output_path = active_profile_dir() / "salary_data.json"
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
     print(f"Reading: {excel_path}")

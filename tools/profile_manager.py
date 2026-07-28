@@ -73,8 +73,21 @@ def fail(message: str) -> None:
     errors.append(message)
 
 
+def is_valid_id(profile_id: str) -> bool:
+    """Pure predicate: is this a safe single path segment naming a real profile?
+
+    Split out of `validate_id` so read-only consumers of the pointer can apply
+    exactly the same rule without going through the `errors` list.
+    """
+    return bool(
+        ID_PATTERN.match(profile_id)
+        and ".." not in profile_id
+        and profile_id not in CONTAINER_DIRS
+    )
+
+
 def validate_id(profile_id: str) -> bool:
-    """Check an id is a safe single path segment naming a real profile."""
+    """`is_valid_id` with the user-facing failure messages attached."""
     if not ID_PATTERN.match(profile_id) or ".." in profile_id:
         fail(
             f"invalid profile id {profile_id!r}: use letters, digits, dot, dash and "
@@ -108,20 +121,33 @@ def validate_new_id(profile_id: str) -> bool:
 
 
 def read_active() -> str | None:
-    """Return the active profile id, or None if the pointer is missing/blank."""
+    """Return the active profile id, or None if the pointer is missing/blank.
+
+    utf-8-sig, not utf-8: `.active-profile` is a one-line file people hand-edit,
+    and a Windows editor that saves it with a BOM would otherwise turn the id
+    into '\\ufeff<id>' - failing the slug check and sending every path to the
+    scaffold, with no visible difference in the file.
+    """
     try:
-        value = ACTIVE_FILE.read_text(encoding="utf-8").strip()
+        value = ACTIVE_FILE.read_text(encoding="utf-8-sig").strip()
     except OSError:
         return None
     return value or None
 
 
-def require_active() -> str | None:
+def require_active(*, accept_bootstrap: bool = False) -> str | None:
     """Resolve the active profile, bootstrapping .active-profile if absent.
 
     Every command except `list` and `create` needs a pointer to exist. When it
     does not, seed it from the committed example and stop, so the user makes an
     explicit choice rather than silently operating on _scaffold.
+
+    `accept_bootstrap` is for `switch`, and only `switch`: naming the profile
+    you want *is* the explicit choice this bootstrap exists to force, so
+    stopping afterwards would reject the very command that fixes the problem.
+    Without it a fresh clone fails `create X` -> `switch X` on the first
+    attempt and succeeds on an identical retry. archive/restore/clear-lock keep
+    the hard stop - none of them is a statement about which profile you want.
     """
     active = read_active()
     if active:
@@ -136,11 +162,40 @@ def require_active() -> str | None:
         except OSError as exc:
             fail(f".active-profile: could not create: {exc}")
             return None
+        if accept_bootstrap:
+            seeded = read_active()
+            if seeded:
+                return seeded
     fail(
         "No active profile set. Run: python tools/profile_manager.py create <id> "
         "then switch <id>"
     )
     return None
+
+
+def active_profile_dir(fallback: str = "_scaffold") -> Path:
+    """Resolve `profiles/<active>/` for read-only consumers of the pointer.
+
+    Standalone tools (salary_lookup.py, convert_salary_excel.py) join the
+    pointer's contents straight onto a path, and one of them mkdir -p's the
+    result - so a hand-edited `.active-profile` holding `../..` would otherwise
+    reach outside profiles/. The id therefore has to clear the same slug check
+    every subcommand applies.
+
+    A pointer that fails the check falls back to the scaffold with a warning
+    rather than aborting: these are lookup tools, not profile mutation, and
+    dying on startup would be a worse failure than reading placeholder data.
+    """
+    active = read_active()
+    if active and not is_valid_id(active):
+        print(
+            f"warning: .active-profile contains {active!r}, which is not a valid "
+            f"profile id - using {fallback!r} instead. Repair it with: "
+            f"python tools/profile_manager.py switch <id>",
+            file=sys.stderr,
+        )
+        active = None
+    return PROFILES / (active or fallback)
 
 
 def seed_latex_assets(target: Path) -> None:
@@ -262,7 +317,6 @@ def cmd_list(args: argparse.Namespace) -> None:
         return
     if not records:
         print("No profiles yet. Create one: python tools/profile_manager.py create <id>")
-        return
     for record in records:
         marker = "*" if record["active"] else " "
         tags = []
@@ -272,8 +326,23 @@ def cmd_list(args: argparse.Namespace) -> None:
             tags.append(f"locked: {record['lock']}")
         suffix = f"  ({', '.join(tags)})" if tags else ""
         print(f"{marker} {record['id']}{suffix}")
-    if active and active not in [r["id"] for r in records]:
-        print(f"\nwarning: .active-profile points at {active!r}, which does not exist.")
+    # Pointer health is checked against the filesystem, not against `records`,
+    # and is reported even when nothing is listed - an empty repo whose pointer
+    # names a deleted profile is exactly the case the warning exists for. The
+    # two lists would both give wrong answers here: _scaffold is a legal target
+    # but is never listed, and an archived profile *is* listed while
+    # profiles/<id>/ no longer exists.
+    if active and not profile_dir(active).is_dir():
+        if archived_dir(active).is_dir():
+            print(
+                f"\nwarning: .active-profile points at {active!r}, which is archived. "
+                f"Restore it: python tools/profile_manager.py restore {active}"
+            )
+        else:
+            print(
+                f"\nwarning: .active-profile points at {active!r}, which does not exist. "
+                f"Pick a real one: python tools/profile_manager.py switch <id>"
+            )
 
 
 def cmd_create(args: argparse.Namespace) -> None:
@@ -310,7 +379,7 @@ def cmd_switch(args: argparse.Namespace) -> None:
     target_id = args.id
     if not validate_id(target_id):
         return
-    current = require_active()
+    current = require_active(accept_bootstrap=True)
     if current is None:
         return
     if not profile_dir(target_id).is_dir():
@@ -381,11 +450,26 @@ def cmd_archive(args: argparse.Namespace) -> None:
         return
     print(f"Archived {profile_id} to profiles/archived/{profile_id}/.")
     if read_active() == profile_id:
-        remaining = [pid for pid in list_profile_ids()]
-        fallback = remaining[0] if remaining else "_scaffold"
-        ACTIVE_FILE.write_text(f"{fallback}\n", encoding="utf-8")
-        sync_claude_md(fallback)
-        print(f"It was the active profile; active profile is now {fallback}.")
+        # Always the placeholder, never the alphabetically-first survivor:
+        # auto-selecting a real profile would silently bind the next /apply or
+        # /scrape to a different person's directory, which is the one mistake
+        # this whole restructure exists to prevent. _scaffold holds nothing but
+        # [PLACEHOLDER] tokens, so landing there is loud and harmless.
+        try:
+            ACTIVE_FILE.write_text("_scaffold\n", encoding="utf-8")
+        except OSError as exc:
+            fail(
+                f".active-profile: still names the archived {profile_id!r} and could "
+                f"not be reset: {exc}. Set it yourself: "
+                f"python tools/profile_manager.py switch <id>"
+            )
+            return
+        sync_claude_md("_scaffold")
+        print(
+            "It was the active profile; the pointer now names the '_scaffold' "
+            "placeholder. Choose a real one: "
+            "python tools/profile_manager.py switch <id>"
+        )
 
 
 def cmd_restore(args: argparse.Namespace) -> None:

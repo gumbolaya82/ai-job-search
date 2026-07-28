@@ -26,21 +26,14 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 
+# The pointer is resolved here rather than by the caller so the documented
+# invocation (`python salary_lookup.py "Company"`) and the Bash permission
+# allowlist entries stay exactly as they were. profile_manager owns the id
+# validation - a second copy of that rule here is how the two drift apart.
+sys.path.insert(0, str(ROOT / "tools"))
+from profile_manager import active_profile_dir  # noqa: E402
 
-def _active_profile() -> str:
-    """Read the active profile id, falling back to the scaffold.
-
-    Resolved here rather than by the caller so the documented invocation
-    (`python salary_lookup.py "Company"`) and the Bash permission allowlist
-    entries stay exactly as they were.
-    """
-    try:
-        return (ROOT / ".active-profile").read_text(encoding="utf-8").strip() or "_scaffold"
-    except OSError:
-        return "_scaffold"
-
-
-DATA_FILE = ROOT / "profiles" / _active_profile() / "salary_data.json"
+DATA_FILE = active_profile_dir() / "salary_data.json"
 
 # Common Danish <-> anglicized spelling variants
 SPELLING_VARIANTS = {
