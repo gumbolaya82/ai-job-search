@@ -88,7 +88,7 @@ class ProfileManagerTestCase(unittest.TestCase):
 
 class IsValidIdTests(ProfileManagerTestCase):
     def test_accepts_ordinary_ids(self):
-        for good in ("diane", "diane-nguyen", "d1", "_scaffold", "a.b_c-d"):
+        for good in ("casey", "casey-jordan", "d1", "_scaffold", "a.b_c-d"):
             self.assertTrue(profile_manager.is_valid_id(good), good)
 
     def test_rejects_traversal_and_separators(self):
@@ -100,7 +100,7 @@ class IsValidIdTests(ProfileManagerTestCase):
 
     def test_agrees_with_validate_id(self):
         """The predicate and the message-emitting check must not drift apart."""
-        for candidate in ("diane", "..", "../evil", "archived", "_scaffold", "a/b"):
+        for candidate in ("casey", "..", "../evil", "archived", "_scaffold", "a/b"):
             profile_manager.errors.clear()
             self.assertEqual(
                 profile_manager.is_valid_id(candidate),
@@ -111,10 +111,10 @@ class IsValidIdTests(ProfileManagerTestCase):
 
 class ActiveProfileDirTests(ProfileManagerTestCase):
     def test_resolves_a_valid_pointer(self):
-        self.make_profile("diane")
-        self.set_active("diane")
+        self.make_profile("casey")
+        self.set_active("casey")
         self.assertEqual(
-            profile_manager.active_profile_dir(), self.profiles / "diane"
+            profile_manager.active_profile_dir(), self.profiles / "casey"
         )
 
     def test_missing_pointer_falls_back_to_scaffold(self):
@@ -133,12 +133,12 @@ class ActiveProfileDirTests(ProfileManagerTestCase):
         self.assertEqual(self.profiles, resolved.parent)
 
     def test_pointer_written_with_a_bom_still_resolves(self):
-        self.make_profile("diane")
-        self.set_active("diane", bom=True)
+        self.make_profile("casey")
+        self.set_active("casey", bom=True)
         buffer = io.StringIO()
         with redirect_stderr(buffer):
             resolved = profile_manager.active_profile_dir()
-        self.assertEqual(resolved, self.profiles / "diane")
+        self.assertEqual(resolved, self.profiles / "casey")
         self.assertEqual("", buffer.getvalue())
 
 
@@ -157,13 +157,13 @@ class ListPointerHealthTests(ProfileManagerTestCase):
         self.assertNotIn("warning:", self.run_list())
 
     def test_archived_active_profile_gets_a_restore_hint(self):
-        self.make_profile("diane")
-        self.set_active("diane")
-        self.run_archive("diane")
-        self.set_active("diane")
+        self.make_profile("casey")
+        self.set_active("casey")
+        self.run_archive("casey")
+        self.set_active("casey")
         output = self.run_list()
         self.assertIn("archived", output)
-        self.assertIn("restore diane", output)
+        self.assertIn("restore casey", output)
 
     def test_json_output_stays_parseable(self):
         import json
@@ -190,10 +190,10 @@ class FreshCloneBootstrapTests(ProfileManagerTestCase):
         return buffer.getvalue()
 
     def test_create_then_switch_succeeds_on_the_first_attempt(self):
-        self.make_profile("diane")
-        self.run_switch("diane")
+        self.make_profile("casey")
+        self.run_switch("casey")
         self.assertEqual([], profile_manager.errors)
-        self.assertEqual("diane", profile_manager.read_active())
+        self.assertEqual("casey", profile_manager.read_active())
 
     def test_switch_still_rejects_a_profile_that_does_not_exist(self):
         self.run_switch("nobody")
@@ -202,11 +202,11 @@ class FreshCloneBootstrapTests(ProfileManagerTestCase):
 
     def test_archive_still_stops_on_an_unbootstrapped_pointer(self):
         """Only `switch` accepts the bootstrap; the rest must still stop."""
-        self.make_profile("diane")
-        self.run_archive("diane")
+        self.make_profile("casey")
+        self.run_archive("casey")
         self.assertTrue(profile_manager.errors)
         self.assertIn("No active profile set", profile_manager.errors[0])
-        self.assertTrue((self.profiles / "diane").is_dir())
+        self.assertTrue((self.profiles / "casey").is_dir())
 
 
 class ArchiveActiveProfileTests(ProfileManagerTestCase):

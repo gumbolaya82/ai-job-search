@@ -60,6 +60,7 @@ Thumbs.db
 
 # Memory files (Claude Code user-specific)
 .claude/projects/
+.claude/settings.local.json
 
 # Skills lock (auto-generated)
 skills-lock.json
@@ -119,3 +120,7 @@ profiles/**/cover_letters/OpenFonts/
 
 # Brainstorm mockups (superpowers visual companion) - never ship
 .superpowers/
+
+# Local email-report automation (personal, machine-specific wrapper + logs)
+scripts/
+logs/
