@@ -68,6 +68,10 @@ REQUIRED_IGNORE_RULES = [
     # Written by /scrape and /apply for the duration of a run. `**` rather than
     # `*` so archived profiles, one level deeper, are covered too.
     "profiles/**/.lock",
+    # A profile's own markdown is the personal data itself - candidate identity,
+    # work history, evaluation material, search strategy. The artifact rules
+    # above never covered it. Paired with the _scaffold negation below.
+    "profiles/**/*.md",
 ]
 
 # Negation (re-include) rules the template legitimately ships. .gitignore is
@@ -91,7 +95,15 @@ ALLOWED_IGNORE_NEGATIONS = {
     "!profiles/_scaffold/cv/main_example.tex",
     "!cover_letters/cover_example.tex",
     "!profiles/_scaffold/cover_letters/cover_example.tex",
-    "!**/documents/**/.gitkeep",
+    # Same exact-path discipline as the LaTeX negations: a `**/` .gitkeep
+    # negation would let a real profile's empty documents/ skeleton be
+    # committed, publishing the profile id even with its contents ignored.
+    "!documents/**/.gitkeep",
+    "!profiles/_scaffold/documents/**/.gitkeep",
+    # The scaffold is the shared placeholder template new profiles are copied
+    # from, and CI checks it for placeholder integrity. Archived profiles are
+    # deliberately not re-included - still real data, merely inactive.
+    "!profiles/_scaffold/**/*.md",
 }
 
 FORBIDDEN_SCRIPTS = {"preinstall", "install", "postinstall", "prepare", "prepack"}

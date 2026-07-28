@@ -44,6 +44,20 @@ linkedin_Profile.pdf
 # deeper at profiles/archived/<id>/, are covered by the same rule.
 profiles/**/.lock
 
+# A profile's own markdown IS the personal data: CLAUDE.md holds the candidate's
+# identity and address, 01/02 their work history, 04/05/07 their evaluation and
+# interview material, search-queries.md their job-search strategy. The rules
+# above cover generated artifacts (CVs, PDFs, scraper state) but said nothing
+# about these, leaving them untracked-but-committable - one `git add .` from
+# being published.
+#
+# profiles/_scaffold/ is re-included because it is the shared placeholder
+# template every new profile is copied from, and CI checks it for placeholder
+# integrity. Archived profiles are deliberately NOT re-included: they are
+# somebody's real data that merely stopped being active.
+profiles/**/*.md
+!profiles/_scaffold/**/*.md
+
 # Personal photos and signatures
 *.jpg
 *.jpeg
@@ -98,7 +112,11 @@ profiles/**/cover_letters/OpenFonts/
 # Interview prep and experience records: these name the employers applied to,
 # quote what was submitted, and set out the candidate's weak points.
 **/documents/interview/**
-!**/documents/**/.gitkeep
+# Two exact paths, not `**/`, for the same reason as the LaTeX negations below:
+# a `**/` negation would let a real profile's directory skeleton be committed,
+# publishing the profile id. Only the root fixture and the scaffold are shared.
+!documents/**/.gitkeep
+!profiles/_scaffold/documents/**/.gitkeep
 
 # Personal job search tracking
 **/job_search_tracker.csv
