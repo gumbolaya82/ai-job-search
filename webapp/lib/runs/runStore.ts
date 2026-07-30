@@ -30,15 +30,7 @@ export type RunStorage = { subdir: string; logName: string };
 export type RunRecord = {
   id: string;
   profile: string;
-  /**
-   * Optional in the type, not in practice: every record read through
-   * `readRunFor` has already passed through `withCommandDefault` below, so
-   * callers see it as always present. Left optional here (rather than
-   * required, as sketched in the plan) only so `test/runStore.test.ts` — a
-   * protected suite predating this field — keeps compiling unmodified; see
-   * the Task 3 report for the full reasoning.
-   */
-  command?: CommandId;
+  command: CommandId;
   args: { focus: string; broad: boolean };
   pid: number;
   startedAt: string;

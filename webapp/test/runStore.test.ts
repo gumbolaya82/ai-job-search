@@ -6,6 +6,7 @@ function record(over: Partial<RunRecord> = {}): RunRecord {
   return {
     id: "2026-07-29T01-18-44Z",
     profile: "diane",
+    command: "scrape",
     args: { focus: "", broad: false },
     pid: 20492,
     startedAt: "2026-07-29T01:18:44.357Z",

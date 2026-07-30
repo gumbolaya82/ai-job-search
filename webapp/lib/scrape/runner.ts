@@ -178,6 +178,7 @@ export async function startScrape(
   writeRun({
     id: runId,
     profile: resolved,
+    command: "scrape",
     args: { focus, broad },
     pid,
     startedAt: new Date().toISOString(),
