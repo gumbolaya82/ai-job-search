@@ -1,13 +1,22 @@
 "use server";
 
 import fs from "node:fs";
-import { execFileSync, spawn } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { revalidatePath } from "next/cache";
 import { repoRoot, profilePath } from "../repoRoot";
-import { readRegistry, resolveProfileId, runProfileManager } from "../profileRegistry";
+import { readRegistry, resolveProfileId } from "../profileRegistry";
 import { activateProfile } from "../profileOps";
 import { timelineForProfile } from "../jobsTimeline";
-import { CLAUDE, FocusError, buildScrapeArgv, readAllowedTools, sanitiseFocus } from "./claudeCli";
+import {
+  CLAUDE,
+  FocusError,
+  SKILL_MD_PARTS,
+  buildScrapeArgv,
+  buildScrapePrompt,
+  readAllowedTools,
+  sanitiseFocus,
+  type ScrapeArgs,
+} from "./claudeCli";
 import {
   addedKeys,
   filterRowsByKey,
@@ -15,7 +24,13 @@ import {
   seenKeys,
   timelineKeysForAdded,
 } from "./seenDiff";
-import { describeLogLines, finalResultCost, scrapeProgress, type PhaseProgress } from "./logFormat";
+import {
+  SCRAPE_PHASE_SET,
+  describeLogLines,
+  finalResultCost,
+  scrapeProgress,
+  type PhaseProgress,
+} from "./logFormat";
 import {
   cancelRefusal,
   latestRun,
@@ -27,6 +42,9 @@ import {
   writeRun,
   type RunRecord,
 } from "./runStore";
+import { spawnDetached } from "../runs/spawnRun";
+import { clearLock, hasFinished, isAlive } from "../runs/lifecycle";
+import type { CommandSpec } from "../runs/commandSpec";
 
 /**
  * Starting, watching and cancelling a real `/scrape`.
@@ -89,15 +107,26 @@ function readSeenFile(profileId: string) {
   return fs.existsSync(file) ? parseSeenFile(fs.readFileSync(file, "utf8")) : {};
 }
 
-/** Best-effort lock clear. Idempotent: `clear-lock` exits 0 when none exists. */
-function clearLock(profileId: string): void {
-  try {
-    runProfileManager(["clear-lock", profileId]);
-  } catch {
-    // A failure here is not worth failing the status read over; the Profiles
-    // screen surfaces a stuck lock and offers the same clear.
-  }
-}
+/**
+ * `/scrape` re-expressed as a `CommandSpec`, so `lib/runs/` has a working
+ * example to model `/rank` and `/apply` on. `finalise` is exactly the
+ * seen-diff computation this module always did: which of `seen_jobs.json`'s
+ * keys are new since the run started, resolved back to full timeline rows.
+ */
+const SCRAPE_SPEC: CommandSpec<ScrapeArgs> = {
+  id: "scrape",
+  storage: { subdir: "scrape-runs", logName: "scrape.log" },
+  buildPrompt: buildScrapePrompt,
+  allowlist: { kind: "skill", parts: SKILL_MD_PARTS },
+  phases: SCRAPE_PHASE_SET,
+  finalise: (run) => {
+    const after = readSeenFile(run.profile);
+    const added = addedKeys(run.seenKeysBefore, seenKeys(after));
+    const keys = timelineKeysForAdded(run.profile, added, after);
+    const newJobs = filterRowsByKey(timelineForProfile(run.profile), keys);
+    return { ...run, newJobs };
+  },
+};
 
 export async function startScrape(
   profileId: string,
@@ -150,20 +179,15 @@ export async function startScrape(
     return { ok: false, message: `Could not build the run: ${String(err)}`, locked: false, runId: null };
   }
 
-  const out = fs.openSync(logPath(resolved, runId), "a");
   let pid: number;
   try {
-    const child = spawn(CLAUDE, argv, {
+    pid = spawnDetached({
+      command: CLAUDE,
+      argv,
       cwd: repoRoot(),
-      detached: true,
-      windowsHide: true,
-      stdio: ["ignore", out, out],
+      logFile: logPath(resolved, runId),
     });
-    child.unref();
-    if (!child.pid) throw new Error("spawn returned no pid");
-    pid = child.pid;
   } catch (err) {
-    fs.closeSync(out);
     return {
       ok: false,
       message: `Could not start '${CLAUDE}': ${String(err)}`,
@@ -171,7 +195,6 @@ export async function startScrape(
       runId: null,
     };
   }
-  fs.closeSync(out);
 
   // Written before returning, so a dev-server restart mid-run does not lose the
   // handle on a process that is still going.
@@ -194,29 +217,6 @@ export async function startScrape(
   return { ok: true, message: `Started run ${runId} (pid ${pid}).`, locked: false, runId };
 }
 
-/** True once the log carries a `result` event — the run's own end-of-stream marker. */
-function hasFinished(lines: string[]): { finished: boolean; errored: boolean } {
-  for (let i = lines.length - 1; i >= 0; i -= 1) {
-    try {
-      const event = JSON.parse(lines[i].trim()) as { type?: string; is_error?: boolean };
-      if (event.type === "result") return { finished: true, errored: Boolean(event.is_error) };
-    } catch {
-      // Not JSON — the CLI's plain-text warnings. Keep scanning backwards.
-    }
-  }
-  return { finished: false, errored: false };
-}
-
-function isAlive(pid: number): boolean {
-  try {
-    // Signal 0 tests for existence without delivering anything.
-    process.kill(pid, 0);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 /**
  * Fill in everything that can only be known once the run has stopped.
  *
@@ -225,18 +225,13 @@ function isAlive(pid: number): boolean {
  * collect. The log's `result` event carries the success/failure signal instead.
  */
 function finalise(run: RunRecord, state: RunRecord["state"], lines: string[] = []): RunRecord {
-  const after = readSeenFile(run.profile);
-  const added = addedKeys(run.seenKeysBefore, seenKeys(after));
-  const keys = timelineKeysForAdded(run.profile, added, after);
-  const newJobs = filterRowsByKey(timelineForProfile(run.profile), keys);
-
-  const finished: RunRecord = {
+  const withResult: RunRecord = {
     ...run,
     state,
     endedAt: new Date().toISOString(),
-    newJobs,
     costUsd: finalResultCost(lines),
   };
+  const finished = SCRAPE_SPEC.finalise(withResult, lines);
   writeRun(finished);
   // The skill cannot delete its own lock in a headless run — see the spike note
   // at the top of this file. Clearing it here is what keeps the next run from

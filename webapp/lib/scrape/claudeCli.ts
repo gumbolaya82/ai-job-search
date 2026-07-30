@@ -1,5 +1,6 @@
 import path from "node:path";
 import { readAllowedToolsFrom } from "../runs/allowedTools.ts";
+import { buildArgv } from "../runs/commandSpec.ts";
 
 // Moved to lib/runs/allowedTools.ts once /rank and /apply also needed them.
 // Re-exported here because this module's public surface is what test/claudeCli.test.ts
@@ -98,19 +99,13 @@ export type ArgvOptions = ScrapeArgs & { allowedTools: string[] };
 /**
  * Full argv for `claude`.
  *
- * `--output-format stream-json --verbose` is what makes the log tail useful:
- * plain text mode writes nothing until the run ends, so a watcher would stare at
- * an empty file for four minutes. `runStore.describeLogLines` turns the JSONL
- * back into readable one-liners for the UI.
+ * Delegates to `lib/runs/commandSpec.ts`'s `buildArgv` so `/scrape`, `/rank`
+ * and `/apply` share the same `--output-format stream-json --verbose` flags —
+ * what makes the log tail useful: plain text mode writes nothing until the
+ * run ends, so a watcher would stare at an empty file for four minutes.
+ * `runStore.describeLogLines` turns the JSONL back into readable one-liners
+ * for the UI.
  */
 export function buildScrapeArgv({ focus, broad, allowedTools }: ArgvOptions): string[] {
-  return [
-    "-p",
-    buildScrapePrompt({ focus, broad }),
-    "--allowedTools",
-    allowedTools.join(","),
-    "--output-format",
-    "stream-json",
-    "--verbose",
-  ];
+  return buildArgv(buildScrapePrompt({ focus, broad }), allowedTools);
 }
