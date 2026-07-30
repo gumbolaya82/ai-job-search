@@ -29,31 +29,39 @@ errors: list[str] = []
 
 
 def rel(path: Path) -> str:
-    return str(path.relative_to(ROOT))
+    try:
+        return str(path.relative_to(ROOT))
+    except ValueError:
+        # Test fixtures may exercise checks against files outside ROOT
+        # (e.g. a pytest tmp_path); fall back to the absolute path rather
+        # than crash on a message we're only building for a human to read.
+        return str(path)
 
 
-def check_skill(path: Path) -> None:
-    text = path.read_text(encoding="utf-8")
-    if not text.startswith("---\n"):
-        errors.append(f"{rel(path)}: missing YAML frontmatter (file must start with ---)")
-        return
+def _parse_frontmatter(path: Path, text: str) -> tuple[dict, int] | None:
+    """Parse a leading ``---``-delimited YAML block.
+
+    `text` must already be known to start with "---\n". Returns
+    `(data, end)` where `end` is the index of the closing block's leading
+    "\n---", or None (after recording an error) if the block is missing,
+    unterminated, invalid YAML, or not a mapping.
+    """
     end = text.find("\n---", 4)
     if end == -1:
         errors.append(f"{rel(path)}: unterminated YAML frontmatter")
-        return
+        return None
     try:
         data = yaml.safe_load(text[4:end])
     except yaml.YAMLError as exc:
         errors.append(f"{rel(path)}: frontmatter is not valid YAML: {exc}")
-        return
+        return None
     if not isinstance(data, dict):
         errors.append(f"{rel(path)}: frontmatter did not parse to a mapping")
-        return
-    for key in ("name", "description"):
-        if not data.get(key):
-            errors.append(f"{rel(path)}: frontmatter missing required key '{key}'")
+        return None
+    return data, end
 
-    allowed = data.get("allowed-tools", "")
+
+def _check_allowed_tools_paths(path: Path, allowed) -> None:
     if isinstance(allowed, str):
         for match in re.finditer(r"bun run ([^\s)]+)", allowed):
             target = match.group(1).rstrip("*")
@@ -70,9 +78,37 @@ def check_skill(path: Path) -> None:
                     errors.append(f"{rel(path)}: allowed-tools references a missing file: {target}")
 
 
+def check_skill(path: Path) -> None:
+    text = path.read_text(encoding="utf-8")
+    if not text.startswith("---\n"):
+        errors.append(f"{rel(path)}: missing YAML frontmatter (file must start with ---)")
+        return
+    parsed = _parse_frontmatter(path, text)
+    if parsed is None:
+        return
+    data, _end = parsed
+    for key in ("name", "description"):
+        if not data.get(key):
+            errors.append(f"{rel(path)}: frontmatter missing required key '{key}'")
+
+    _check_allowed_tools_paths(path, data.get("allowed-tools", ""))
+
+
 def check_command(path: Path) -> None:
-    lines = path.read_text(encoding="utf-8").lstrip().splitlines()
-    first = lines[0] if lines else ""
+    text = path.read_text(encoding="utf-8").lstrip()
+    if text.startswith("---\n"):
+        parsed = _parse_frontmatter(path, text)
+        if parsed is None:
+            return
+        data, end = parsed
+        _check_allowed_tools_paths(path, data.get("allowed-tools", ""))
+        # The title line is the first non-blank line after the closing
+        # "\n---" marker (4 chars: newline + three dashes).
+        rest_lines = [line for line in text[end + 4:].splitlines() if line.strip()]
+        first = rest_lines[0] if rest_lines else ""
+    else:
+        lines = text.splitlines()
+        first = lines[0] if lines else ""
     if not first.startswith("# /"):
         errors.append(f"{rel(path)}: command file must start with a '# /<name>' title (found: {first[:50]!r})")
 

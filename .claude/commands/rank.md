@@ -1,3 +1,7 @@
+---
+allowed-tools: Read, Write, Edit, Glob, Grep, Task, WebFetch
+---
+
 # /rank - Triage Scraped Jobs into a Ranked Shortlist
 
 You are batch-scoring the jobs that `/scrape` has collected, so the user can decide where to spend `/apply` effort. `/scrape` finds and dedupes postings; `/apply` evaluates one at a time in depth. `/rank` is the bridge: it scores every new posting against the fit framework and returns a ranked shortlist.
@@ -57,7 +61,8 @@ Each agent returns a JSON array, one object per job:
   "key": "<the job's key in seen_jobs.json>",
   "status": "scored" | "expired",
   "scores": { "technical": 0-100, "experience": 0-100, "behavioral": 0-100, "career": 0-100 },
-  "location": "PASS" | "FAIL" | "FLAG",
+  "location": "<the posting's location, verbatim; empty string if none stated>",
+  "location_verdict": "PASS" | "FAIL" | "FLAG",
   "deadline": "YYYY-MM-DD" | null,
   "strengths": ["1-3 bullets, grounded in the posting text"],
   "gaps": ["1-3 bullets, honest"],
@@ -73,9 +78,9 @@ Scoring uses the dimension definitions from `04-job-evaluation.md` verbatim. The
 
 Back in the main context, for each scored job:
 
-1. Compute the overall score with the weighting from `04-job-evaluation.md` (Technical 30%, Experience 25%, Behavioral 15%, Career Alignment 30%; location is unweighted).
+1. Compute the overall score with the weighting from `04-job-evaluation.md` (Technical 30%, Experience 25%, Behavioral 15%, Career Alignment 30%; the location veto is unweighted).
 2. Map to the framework's verdict bands (Strong Fit 75+, Good Fit 60-74, Moderate Fit 45-59, Weak Fit 30-44, Poor Fit <30).
-3. **Location veto:** `FAIL` (e.g. requires relocation) excludes the job from the shortlist no matter the score - list it separately with the reason. `FLAG` (e.g. heavy travel) stays in the ranking but carries a visible ⚠ marker for the user to judge.
+3. **Location veto (`location_verdict`):** `FAIL` (e.g. requires relocation) excludes the job from the shortlist no matter the score - list it separately with the reason. `FLAG` (e.g. heavy travel) stays in the ranking but carries a visible ⚠ marker for the user to judge.
 4. **Deadline urgency:** a deadline within 7 days gets a 🔥 marker and wins ties. A deadline that has already passed moves the job to `expired`.
 
 Sort by overall score (descending), urgency as tiebreaker.
@@ -86,8 +91,13 @@ Sort by overall score (descending), urgency as tiebreaker.
 
 Update `profiles/<profile>/job_scraper/seen_jobs.json` in place - these fields are additive to the scraper's schema:
 
-- Ranked jobs: set `"status": "ranked"` and add `"rank_score": <overall>`, `"rank_verdict": "<band>"`, `"rank_date": "YYYY-MM-DD"`
+- Ranked jobs: set `"status": "ranked"` and add `"rank_score": <overall>`,
+  `"rank_verdict": "<band>"`, `"rank_date": "YYYY-MM-DD"`, `"location": "<the
+  posting's location, verbatim>"`, `"location_verdict": "PASS" | "FAIL" |
+  "FLAG"`, `"deadline": "YYYY-MM-DD"` (null when the posting states none)
 - Dead or past-deadline jobs: set `"status": "expired"`
+
+The agents already return `location`, `location_verdict`, and `deadline` in Step 2's JSON, and persisting them is what lets the webapp show a deadline column, the posting's location, and an applied location veto after the run's own output has scrolled away.
 
 Do not modify `profiles/<profile>/job_search_tracker.csv` - that file records applications, and `/rank` never applies. Re-running `/rank` is idempotent: already-`ranked` jobs are skipped unless `--all` re-scores them.
 
@@ -114,7 +124,7 @@ Ranked <N> new postings (<X> shortlisted, <Y> below threshold, <Z> expired/vetoe
 | Score | Verdict | Title | Company | One-line reason |
 
 ### Excluded
-- <Title> at <Company> - location FAIL: requires relocation
+- <Title> at <Company> - location_verdict FAIL: requires relocation
 - <Title> at <Company> - expired <date>
 ```
 

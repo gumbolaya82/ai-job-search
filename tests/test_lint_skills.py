@@ -103,5 +103,51 @@ class SettingsShapeTests(LinterRepoFixture):
                 self.assertEqual(result.returncode, 1)
                 self.assertIn("expected permissions.allow to be a list", result.stdout)
                 self.assertNotIn("Traceback", result.stderr)
+
+
+# --- check_command frontmatter handling -----------------------------------
+# lint_skills' command check must tolerate frontmatter but still demand a
+# title. These run against the real repo/tools (not the temp fixture above)
+# since they exercise check_command directly.
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def run_lint():
+    return subprocess.run(
+        [sys.executable, str(ROOT / "tools" / "lint_skills.py")],
+        capture_output=True,
+        text=True,
+        cwd=ROOT,
+    )
+
+
+def test_repo_lints_clean():
+    result = run_lint()
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_command_with_frontmatter_and_no_title_fails(tmp_path, monkeypatch):
+    sys.path.insert(0, str(ROOT / "tools"))
+    import lint_skills
+
+    bad = tmp_path / "bogus.md"
+    bad.write_text("---\nallowed-tools: Read\n---\n\nNo title here\n", encoding="utf-8")
+    lint_skills.errors.clear()
+    lint_skills.check_command(bad)
+    assert lint_skills.errors, "a command without a '# /<name>' title must fail"
+
+
+def test_command_with_frontmatter_and_title_passes(tmp_path):
+    sys.path.insert(0, str(ROOT / "tools"))
+    import lint_skills
+
+    good = tmp_path / "rank.md"
+    good.write_text("---\nallowed-tools: Read, Task\n---\n\n# /rank - Triage\n", encoding="utf-8")
+    lint_skills.errors.clear()
+    lint_skills.check_command(good)
+    assert not lint_skills.errors, lint_skills.errors
+
+
 if __name__ == "__main__":
     unittest.main()
