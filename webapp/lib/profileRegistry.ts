@@ -1,8 +1,5 @@
 import { execFileSync } from "node:child_process";
-// Explicit `.ts` extension: this module is now reached by `node --test` via
-// lib/runs/lifecycle.ts's `clearLock`, and Node's resolver does not guess
-// extensions.
-import { repoRoot } from "./repoRoot.ts";
+import { repoRoot } from "./repoRoot";
 
 /**
  * Read-only view of the profile list.

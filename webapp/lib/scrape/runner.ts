@@ -43,7 +43,8 @@ import {
   type RunRecord,
 } from "./runStore";
 import { spawnDetached } from "../runs/spawnRun";
-import { clearLock, hasFinished, isAlive } from "../runs/lifecycle";
+import { hasFinished, isAlive } from "../runs/lifecycle";
+import { clearLock } from "../runs/clearLock";
 import type { CommandSpec } from "../runs/commandSpec";
 
 /**

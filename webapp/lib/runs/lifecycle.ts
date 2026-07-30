@@ -1,23 +1,17 @@
-// Explicit `.ts` extension: like the rest of lib/runs/, this module gets
-// exercised by `node --test` as well as by the bundler, and Node's resolver
-// does not guess extensions.
-import { runProfileManager } from "../profileRegistry.ts";
-
 /**
- * Telling whether a headless run has stopped, and clearing what it could not
- * clear itself.
+ * Telling whether a headless run has stopped.
  *
- * Lifted out of lib/scrape/runner.ts once /rank and /apply needed the same two
- * facts a spike (2026-07-28) established there:
+ * Lifted out of lib/scrape/runner.ts once /rank and /apply needed the same
+ * fact a spike (2026-07-28) established there: a completed run writes a
+ * `result` event into its log, and that event — not the pid — is the
+ * authoritative "this finished" signal. A process can still be winding down
+ * after writing it, and can vanish without ever writing one if it is killed
+ * externally.
  *
- *  1. A completed run writes a `result` event into its log. That event, not
- *     the pid, is the authoritative "this finished" signal — a process can
- *     still be winding down after writing it, and can vanish without ever
- *     writing one if it is killed externally.
- *  2. The run does NOT delete `profiles/<id>/.lock` itself. Its own `rm` and
- *     `Remove-Item` were both refused by Claude Code's workspace-trust
- *     sandbox, so whichever module finalises a run must clear the lock on
- *     every terminal path.
+ * Pure and zero-import by design. `clearLock`, which shells out via
+ * profileRegistry.ts, lives in its own lib/runs/clearLock.ts instead of here
+ * — that coupling is real but it has no business dragging down two functions
+ * that only ever look at strings and a pid.
  */
 
 /** True once the log carries a `result` event — the run's own end-of-stream marker. */
@@ -40,15 +34,5 @@ export function isAlive(pid: number): boolean {
     return true;
   } catch {
     return false;
-  }
-}
-
-/** Best-effort lock clear. Idempotent: `clear-lock` exits 0 when none exists. */
-export function clearLock(profileId: string): void {
-  try {
-    runProfileManager(["clear-lock", profileId]);
-  } catch {
-    // A failure here is not worth failing the status read over; the Profiles
-    // screen surfaces a stuck lock and offers the same clear.
   }
 }
