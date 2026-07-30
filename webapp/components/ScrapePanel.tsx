@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import type { ProfileRecord } from "@/lib/profileRegistry";
+import { SCRAPE_PHASES } from "@/lib/scrape/logFormat";
 import type { ScrapeStartResult, ScrapeStatus } from "@/lib/scrape/runner";
 import EmptyState from "./EmptyState";
 import FitMeter from "./FitMeter";
@@ -302,7 +303,7 @@ export default function ScrapePanel({ profiles, active, preselect, initial, acti
             </div>
           )}
 
-          <PhaseBar progress={status.progress} running={isRunning} />
+          <PhaseBar labels={SCRAPE_PHASES} progress={status.progress} running={isRunning} />
 
           <pre className="logtail" ref={logRef}>
             {status.lines.length ? status.lines.join("\n") : "waiting for output…"}

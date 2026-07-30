@@ -8,9 +8,13 @@
  * point of a log tail. So this module keeps the handful of event types that say
  * what the agent is actually doing.
  *
- * Pure string work, no imports: it is unit-testable and safe to call from either
- * side of the server/client boundary.
+ * Mostly pure string work: it is unit-testable and safe to call from either
+ * side of the server/client boundary. The phase-progress section at the bottom
+ * imports `runProgress` from lib/runs/progress.ts, which is the shared,
+ * command-agnostic version of the derivation this module originated.
  */
+
+import { runProgress, type PhaseSet, type PhaseProgress } from "../runs/progress.ts";
 
 export type StreamEvent = {
   type?: string;
@@ -32,7 +36,7 @@ function clip(s: string, max = MAX_DETAIL): string {
 }
 
 /** The most identifying field of a tool call, so the line reads like an action. */
-function toolDetail(input: unknown): string {
+export function toolDetail(input: unknown): string {
   if (!input || typeof input !== "object") return "";
   const o = input as Record<string, unknown>;
   for (const key of ["command", "file_path", "pattern", "url", "query", "prompt"]) {
@@ -42,7 +46,7 @@ function toolDetail(input: unknown): string {
   return clip(JSON.stringify(o));
 }
 
-function contentBlocks(event: StreamEvent): Record<string, unknown>[] {
+export function contentBlocks(event: StreamEvent): Record<string, unknown>[] {
   const raw = event.message?.content;
   return Array.isArray(raw) ? (raw as Record<string, unknown>[]) : [];
 }
@@ -143,13 +147,7 @@ export const SCRAPE_PHASES = ["portal queries", "fit-rank", "seen-diff", "digest
 
 export type ScrapePhase = (typeof SCRAPE_PHASES)[number];
 
-export type PhaseProgress = {
-  /** Index into SCRAPE_PHASES, or -1 before the first recognisable marker. */
-  index: number;
-  label: ScrapePhase | null;
-  /** True once the log carries its `result` event. */
-  finished: boolean;
-};
+export type { PhaseProgress };
 
 /**
  * Which phase a single tool call belongs to, or -1 for the great many that
@@ -181,51 +179,15 @@ function phaseOfTool(name: string, detail: string): number {
   return -1;
 }
 
-/**
- * How far a run has got, from its raw log lines.
- *
- * Monotonic by construction: phases only ever advance, so one late Read of a
- * profile doc cannot drag a finished run back to fit-rank. A run that produced
- * no recognisable marker yet reports index -1 rather than guessing phase 0 —
- * the first thirty seconds are session setup, and claiming progress there would
- * be a lie the progress bar cannot take back.
- */
+export const SCRAPE_PHASE_SET: PhaseSet = {
+  labels: SCRAPE_PHASES,
+  classify: phaseOfTool,
+  fromText: (text) => (/new job matches|found \d+ new position/i.test(text) ? 3 : -1),
+};
+
+/** Kept as the scrape-bound alias: test/scrapeProgress.test.ts and runner.ts call it. */
 export function scrapeProgress(lines: string[]): PhaseProgress {
-  let index = -1;
-  let finished = false;
-
-  for (const line of lines) {
-    let event: StreamEvent;
-    try {
-      event = JSON.parse(line.trim()) as StreamEvent;
-    } catch {
-      continue; // Plain-text CLI warnings carry no phase signal.
-    }
-
-    if (event.type === "result") {
-      finished = true;
-      continue;
-    }
-
-    if (event.type !== "assistant") continue;
-
-    for (const block of contentBlocks(event)) {
-      if (block.type === "tool_use") {
-        const at = phaseOfTool(String(block.name ?? ""), toolDetail(block.input));
-        if (at > index) index = at;
-      } else if (
-        block.type === "text" &&
-        typeof block.text === "string" &&
-        /new job matches|found \d+ new position/i.test(block.text)
-      ) {
-        // The Step 5 report header — the digest phase by definition.
-        if (index < 3) index = 3;
-      }
-    }
-  }
-
-  if (finished) index = SCRAPE_PHASES.length - 1;
-  return { index, label: index >= 0 ? SCRAPE_PHASES[index] : null, finished };
+  return runProgress(lines, SCRAPE_PHASE_SET);
 }
 
 /** The run's total cost from the log's `result` event, if it has finished. */
