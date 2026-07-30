@@ -1,0 +1,23 @@
+{
+  "name": "ai-job-search-webapp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local read-mostly manager for ai-job-search profiles, jobs and documents.",
+  "scripts": {
+    "dev": "next dev -H 127.0.0.1",
+    "build": "next build",
+    "start": "next start -H 127.0.0.1",
+    "test": "node --test \"test/**/*.test.ts\""
+  },
+  "dependencies": {
+    "next": "^16.2.12",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.2",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "typescript": "^7.0.2"
+  }
+}

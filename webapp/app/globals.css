@@ -1,0 +1,1066 @@
+/*
+ * Design tokens.
+ *
+ * Lifted from profiles/<id>/reports/.../summary.html and /html-report's design
+ * spec so this app and the generated reports read as one system, then adjusted
+ * per the playground brief: hue-250 accent, softly raised cards, tinted status
+ * pills, 15.5px base type, monospace metadata.
+ *
+ * Components never hardcode a colour, radius or shadow. Everything below is a
+ * token, and the dark theme at the bottom of this file only redefines values —
+ * never names — so every component inherits it without knowing it exists.
+ */
+
+:root {
+  /* surfaces — the report palette, unchanged */
+  --bg: #f8fafc;
+  --card: #ffffff;
+  --border: #e2e8f0;
+  --text: #1e293b;
+  --muted: #64748b;
+
+  /* accent: hue 250 */
+  --accent: hsl(250 83% 53%);
+  --accent-soft: hsl(250 83% 53% / 0.11);
+  --accent-text: hsl(250 83% 45%);
+
+  /* fit tones — the three the reports already use */
+  --high: #22c55e;
+  --medium: #f59e0b;
+  --low: #ef4444;
+
+  /* application status — /html-report's five canonical buckets */
+  --st-active: #3b82f6;
+  --st-interview: #f59e0b;
+  --st-offer: #8b5cf6;
+  --st-hired: #22c55e;
+  --st-rejected: #ef4444;
+  --st-none: #94a3b8;
+
+  /* type */
+  --fs: 15.5px;
+  --fs-sm: 13.7px;
+  --fs-xs: 12px;
+  --fs-h1: 26.8px;
+  --fs-h2: 18.6px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Code", "Segoe UI Mono", Consolas, monospace;
+
+  /* rhythm */
+  --pad: 20px;
+  --gap: 21px;
+  --rowpad: 8px;
+  --radius: 14px;
+  --maxw: 1060px;
+
+  /* the icon rail's width — the shell's one structural measurement */
+  --rail: 54px;
+
+  /* softly raised cards: a contact shadow plus a wide ambient one */
+  --card-border: 1px solid transparent;
+  --card-shadow: 0 1px 2px rgba(15, 23, 42, 0.06), 0 8px 22px rgba(15, 23, 42, 0.07);
+
+  /* neutral wash, used for hovers and inert chips in both themes */
+  --wash: rgba(100, 116, 139, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: var(--fs);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+h1 {
+  font-size: var(--fs-h1);
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+h2 {
+  font-size: var(--fs-h2);
+  margin: 0 0 12px;
+}
+
+/* ---------- shell ---------- */
+.shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+/*
+ * The nav is an icon rail, not a sidebar: four destinations never needed 190px
+ * of chrome, and the active-profile line it used to carry now lives in the page
+ * header where the rest of the page context is. Each glyph keeps its label in
+ * `title` + `aria-label` — see components/SideNav.tsx.
+ */
+.side {
+  width: var(--rail);
+  flex: 0 0 var(--rail);
+  background: var(--card);
+  border-right: 1px solid var(--border);
+  padding: 12px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+.brandmark {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: var(--accent);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: var(--fs-sm);
+  letter-spacing: -0.03em;
+  margin-bottom: 10px;
+  flex: 0 0 auto;
+}
+.navlink {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--muted);
+  flex: 0 0 auto;
+}
+.navlink:hover {
+  background: var(--wash);
+  text-decoration: none;
+  color: var(--text);
+}
+.navlink.on {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+.main {
+  flex: 1;
+  min-width: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+.wrap {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 0 var(--pad) var(--pad);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+/*
+ * Sticky to the top of `.main` — the scroll container — so the page title, its
+ * count line and the global search field stay reachable through a 400-row table.
+ * The negative margins let its hairline span the full content column.
+ */
+.pagehead {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 0 calc(-1 * var(--pad));
+  padding: 14px var(--pad);
+  background: color-mix(in srgb, var(--bg) 86%, transparent);
+  backdrop-filter: blur(9px);
+  border-bottom: 1px solid var(--border);
+}
+.crumb {
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+/* The active-profile line, relocated here from the foot of the old sidebar. */
+.activeline {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+}
+.activeline b {
+  color: var(--accent-text);
+}
+
+/* ---------- global search ---------- */
+/*
+ * One field for the whole app. The query lives in UiState so it survives route
+ * changes, and jobs, profiles and documents each filter their own list from it.
+ */
+.headsearch {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.searchbox {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 5px 13px;
+}
+.searchbox:focus-within {
+  border-color: var(--accent);
+}
+.searchbox .gl {
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  line-height: 1;
+}
+.searchbox input {
+  font: inherit;
+  font-size: var(--fs-sm);
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--text);
+  min-width: 180px;
+}
+.searchbox button.x {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--fs-sm);
+  padding: 0;
+  line-height: 1;
+}
+.kbdhint {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--muted);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.kbdhint:hover {
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+/* ---------- card ---------- */
+.card {
+  background: var(--card);
+  border: var(--card-border);
+  box-shadow: var(--card-shadow);
+  border-radius: var(--radius);
+  padding: var(--pad);
+}
+.card.tight {
+  padding: 0;
+  overflow: hidden;
+}
+.card.tight > .cardhead {
+  padding: var(--pad) var(--pad) 0;
+}
+.cardhead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.cardhead h2 {
+  margin: 0;
+}
+.spacer {
+  flex: 1;
+}
+.note {
+  color: var(--muted);
+  font-size: var(--fs-xs);
+}
+
+/* ---------- table ---------- */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+}
+th,
+td {
+  text-align: left;
+  padding: var(--rowpad) 10px;
+  border-bottom: 1px solid var(--border);
+}
+/* Sentence case: shouting six column names is noise the row hairlines already do quietly. */
+thead th {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+}
+tbody tr:last-child td {
+  border-bottom: none;
+}
+/* No zebra — the hairline separates rows, and a hover band tracks the cursor. */
+tbody tr:hover td {
+  background: var(--wash);
+}
+td.meta {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  white-space: nowrap;
+}
+td.title {
+  font-weight: 500;
+}
+.scrollbox {
+  max-height: 62vh;
+  overflow-y: auto;
+}
+
+/* ---------- pills ---------- */
+/*
+ * Tinted, not filled. Five saturated pills per screen competed with the accent
+ * for attention; a 16% wash with the colour carried by the text keeps the bucket
+ * readable without making every row shout.
+ */
+.pill {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--pc, var(--st-none));
+  background: color-mix(in srgb, var(--pc, var(--st-none)) 16%, transparent);
+  white-space: nowrap;
+  line-height: 1.5;
+}
+.pill.plain {
+  color: var(--muted);
+  background: transparent;
+  font-weight: 500;
+  padding-left: 0;
+}
+
+/* ---------- fit meter ---------- */
+/*
+ * Three fit levels used to be three same-sized pills, which made relative fit
+ * something you read rather than saw. A 34px meter makes a column of them
+ * scannable at a glance; the label stays for anyone who needs the word.
+ */
+.fit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+.fit .track {
+  width: 34px;
+  height: 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--fc, var(--st-none)) 20%, transparent);
+  overflow: hidden;
+  flex: 0 0 34px;
+}
+.fit .track i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--fc, var(--st-none));
+}
+.fit .lab {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--fc, var(--muted));
+}
+
+/* ---------- stat cards ---------- */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+}
+.stat {
+  background: var(--card);
+  border: var(--card-border);
+  box-shadow: var(--card-shadow);
+  border-radius: var(--radius);
+  padding: 13px 15px;
+  border-left: 3px solid var(--sc, var(--accent));
+}
+.stat .n {
+  font-size: 25px;
+  font-weight: 700;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+}
+.stat .l {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  margin-top: 3px;
+}
+.stat .spark {
+  display: block;
+  width: 100%;
+  height: 20px;
+  margin-top: 8px;
+  overflow: visible;
+}
+
+/* ---------- controls ---------- */
+.filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.filters input,
+.filters select {
+  font: inherit;
+  font-size: var(--fs-sm);
+  padding: 5px 9px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+}
+.filters input {
+  min-width: 200px;
+}
+
+/* ---------- filter chips ---------- */
+/*
+ * Two <select> menus hid the current filter state behind a closed menu. Chips
+ * show every option and which of them are on, and cost one click to toggle.
+ */
+.chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.chips .grouplab {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  margin-right: 1px;
+}
+.chip {
+  font: inherit;
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  padding: 3px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.chip:hover {
+  color: var(--text);
+  background: var(--wash);
+}
+.chip[aria-pressed="true"] {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--ch, var(--accent)) 16%, transparent);
+  color: var(--ch, var(--accent-text));
+  font-weight: 600;
+}
+.chipsep {
+  width: 1px;
+  align-self: stretch;
+  background: var(--border);
+  margin: 2px 4px;
+}
+
+.btn {
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  padding: 5px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+.btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.btn.primary:hover:not(:disabled) {
+  color: #fff;
+  filter: brightness(1.08);
+}
+.btn.danger:hover:not(:disabled) {
+  border-color: var(--low);
+  color: var(--low);
+}
+.btn.sm {
+  font-size: var(--fs-xs);
+  padding: 3px 9px;
+}
+
+/* ---------- profile rows ---------- */
+.prow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.prow:last-of-type {
+  border-bottom: none;
+}
+.prow .id {
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.prow .facts {
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  margin-top: 2px;
+  font-family: var(--font-mono);
+}
+.prow .acts {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.prow.is-archived .id {
+  color: var(--muted);
+}
+
+/* ---------- alerts ---------- */
+.alert {
+  border-radius: var(--radius);
+  padding: 13px 15px;
+  font-size: var(--fs-sm);
+  border: 1px solid var(--medium);
+  background: color-mix(in srgb, var(--medium) 9%, transparent);
+}
+.alert.err {
+  border-color: var(--low);
+  background: color-mix(in srgb, var(--low) 9%, transparent);
+}
+.alert.ok {
+  border-color: var(--high);
+  background: color-mix(in srgb, var(--high) 9%, transparent);
+}
+.alert b {
+  display: block;
+  margin-bottom: 3px;
+}
+.alert pre {
+  margin: 6px 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  white-space: pre-wrap;
+  color: var(--muted);
+}
+.alert .acts {
+  margin-top: 10px;
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+/* ---------- code ---------- */
+code,
+.cmd {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 2px 7px;
+  border-radius: 7px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+button.cmd {
+  cursor: pointer;
+}
+button.cmd:hover {
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+/* ---------- form ---------- */
+.form {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+.form .f {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.form label {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+.form input[type="text"],
+.form select {
+  font: inherit;
+  font-size: var(--fs-sm);
+  padding: 6px 10px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+}
+.form input[type="text"] {
+  min-width: 200px;
+}
+.form .chk {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  padding-bottom: 7px;
+}
+
+/* ---------- scrape run panel ---------- */
+.runfacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  font-size: var(--fs-xs);
+  font-family: var(--font-mono);
+  color: var(--muted);
+}
+.runfacts b {
+  color: var(--text);
+}
+
+/*
+ * Phase progress. A four-minute run used to be a scrolling log and nothing else,
+ * so "where is it" meant reading the tail. These four segments come from
+ * lib/scrape/logFormat.ts, derived from the same log lines.
+ */
+.phases {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 12px;
+}
+.phase {
+  flex: 1;
+  min-width: 0;
+}
+.phase .seg {
+  height: 5px;
+  border-radius: 999px;
+  background: var(--wash);
+  overflow: hidden;
+}
+.phase .seg i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+}
+.phase.is-done .seg i {
+  width: 100%;
+  opacity: 0.55;
+}
+.phase.is-now .seg i {
+  width: 100%;
+  animation: phasepulse 1.7s ease-in-out infinite;
+}
+.phase.is-todo .seg i {
+  width: 0;
+}
+.phase .nm {
+  font-size: 10.5px;
+  font-family: var(--font-mono);
+  color: var(--muted);
+  margin-top: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.phase.is-now .nm {
+  color: var(--accent-text);
+  font-weight: 600;
+}
+@keyframes phasepulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.42;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .phase.is-now .seg i {
+    animation: none;
+  }
+}
+
+/*
+ * The log tail. Monospace and scrolled to the bottom by ScrapePanel, so a
+ * four-minute run reads like a terminal rather than a wall of JSON — the lines
+ * themselves are pre-digested by lib/scrape/logFormat.ts.
+ */
+.logtail {
+  margin: 0;
+  max-height: 320px;
+  overflow: auto;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  line-height: 1.55;
+  color: var(--muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ---------- documents ---------- */
+.doccat {
+  border-bottom: 1px solid var(--border);
+  padding: 11px 0;
+}
+.doccat:last-child {
+  border-bottom: none;
+}
+.doccat .cat {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.doccat .cat b {
+  font-size: var(--fs-sm);
+}
+.doccat .cat .n {
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  font-family: var(--font-mono);
+}
+.files {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.file {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: var(--fs-sm);
+  padding: 2px 0;
+}
+.file .ext {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--wash);
+  color: var(--muted);
+  min-width: 36px;
+  text-align: center;
+  text-transform: uppercase;
+}
+.file .ext.pdf {
+  background: color-mix(in srgb, var(--low) 14%, transparent);
+  color: var(--low);
+}
+.file .ext.tex {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+.file .nm {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.file .sz {
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  font-family: var(--font-mono);
+}
+
+/* ---------- guided empty states ---------- */
+/*
+ * An italic "nothing here yet" told you the state and left you there. Every
+ * empty region now says what fills it and carries the control that does it.
+ */
+.guide {
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 15px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+  background: color-mix(in srgb, var(--muted) 3%, transparent);
+}
+/* The inline variant: a row, not a panel — a category card stacks several. */
+.guide.sm {
+  padding: 9px 13px;
+  margin-top: 6px;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.guide.sm b {
+  font-weight: 500;
+  color: var(--muted);
+}
+.guide.sm .acts {
+  margin-top: 0;
+}
+.guide b {
+  font-size: var(--fs-sm);
+}
+.guide p {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  max-width: 62ch;
+}
+.guide .acts {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 3px;
+}
+
+/* ---------- command palette ---------- */
+.pal-back {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(15, 23, 42, 0.34);
+  backdrop-filter: blur(2px);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 12vh 16px 16px;
+}
+.pal {
+  width: 100%;
+  max-width: 620px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.28);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 66vh;
+}
+.pal > input {
+  font: inherit;
+  font-size: var(--fs);
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  outline: none;
+  background: transparent;
+  color: var(--text);
+  padding: 14px 16px;
+}
+.pal .list {
+  overflow-y: auto;
+  padding: 6px;
+}
+.pal .grouplab {
+  font-size: 10.5px;
+  font-family: var(--font-mono);
+  color: var(--muted);
+  padding: 8px 10px 4px;
+}
+.pal .opt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  font-size: var(--fs-sm);
+  color: var(--text);
+  background: transparent;
+  border: 0;
+  border-radius: 9px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+.pal .opt.sel {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+.pal .opt .gl {
+  width: 18px;
+  text-align: center;
+  color: var(--muted);
+  flex: 0 0 18px;
+}
+.pal .opt.sel .gl {
+  color: var(--accent-text);
+}
+.pal .opt .txt {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pal .opt .sub {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+.pal .foot {
+  border-top: 1px solid var(--border);
+  padding: 8px 14px;
+  display: flex;
+  gap: 14px;
+  font-size: 10.5px;
+  font-family: var(--font-mono);
+  color: var(--muted);
+  flex-wrap: wrap;
+}
+.pal .none {
+  padding: 18px 12px;
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+
+footer.pvfoot {
+  text-align: center;
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  padding: 10px 0 4px;
+}
+
+/* ---------- dark theme ---------- */
+/*
+ * Same token names, different values. The accent lifts from 53% to 62%
+ * lightness because hue-250 at 53% goes muddy against a #161d26 card, and
+ * --accent-text lifts further still since it is text on that card.
+ */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f141b;
+    --card: #161d26;
+    --border: #272f3c;
+    --text: #e6edf5;
+    --muted: #8c9aab;
+
+    --accent: hsl(250 83% 62%);
+    --accent-soft: hsl(250 83% 62% / 0.17);
+    --accent-text: hsl(250 90% 76%);
+
+    /* A drop shadow reads as nothing on a dark background, so raised cards
+       lean on a visible hairline plus a deeper ambient shadow. */
+    --card-border: 1px solid var(--border);
+    --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 8px 22px rgba(0, 0, 0, 0.38);
+
+    --wash: rgba(148, 163, 184, 0.1);
+  }
+
+  /* Body links take the lifted text tone: --accent at 62% is the right weight
+     for a filled button but sits too close to the card for a run of link text. */
+  a {
+    color: var(--accent-text);
+  }
+
+  .pal {
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+  }
+  .pal-back {
+    background: rgba(0, 0, 0, 0.52);
+  }
+}
+
+@media (max-width: 780px) {
+  .shell {
+    display: block;
+  }
+  .side {
+    width: auto;
+    flex: none;
+    height: auto;
+    position: static;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 6px;
+    padding: 8px 10px;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .brandmark {
+    margin-bottom: 0;
+  }
+  .main {
+    height: auto;
+    overflow-y: visible;
+  }
+  .pagehead {
+    position: static;
+  }
+  .headsearch {
+    margin-left: 0;
+    width: 100%;
+  }
+  .searchbox {
+    flex: 1;
+  }
+  .searchbox input {
+    min-width: 0;
+    width: 100%;
+  }
+}
