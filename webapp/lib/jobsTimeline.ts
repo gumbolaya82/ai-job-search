@@ -3,6 +3,7 @@ import { profilePath } from "./repoRoot.ts";
 import { readRegistry } from "./profileRegistry.ts";
 import { readTracker, type TrackerRow } from "./csv/tracker.ts";
 import { FIT_RANK, type FitLevel } from "./fitRank.ts";
+import { VERDICT_TONE } from "./verdictTone.ts";
 
 /**
  * The reason this webapp exists.
@@ -19,6 +20,12 @@ import { FIT_RANK, type FitLevel } from "./fitRank.ts";
 // now live in a leaf module the email digest can also reach. See lib/fitRank.ts.
 export type { FitLevel };
 export { FIT_RANK };
+
+// Re-exported for the same reason: VERDICT_TONE now lives in a leaf module
+// with no imports, so JobsTable.tsx (a client component) can import the
+// value directly from lib/verdictTone.ts without also pulling in this
+// module's node:fs import. See that file's header comment.
+export { VERDICT_TONE };
 
 /** The five canonical buckets from /html-report's Step 1 status normalisation. */
 export type OutcomeBucket = "Active" | "Interview" | "Offer" | "Hired" | "Rejected/Closed";
@@ -103,15 +110,6 @@ function readSeenJobs(profileId: string): SeenJob[] {
 function asFit(raw: string | undefined): FitLevel {
   return raw === "high" || raw === "medium" ? raw : raw === "low" ? "low" : "low";
 }
-
-/** Bands from 04-job-evaluation.md, as the tones the table paints them. */
-export const VERDICT_TONE: Record<string, string> = {
-  "Strong Fit": "var(--high)",
-  "Good Fit": "var(--st-active)",
-  "Moderate Fit": "var(--medium)",
-  "Weak Fit": "var(--low)",
-  "Poor Fit": "var(--low)",
-};
 
 export function parseRankFields(job: SeenJob) {
   const score = typeof job.rank_score === "number" && Number.isFinite(job.rank_score)

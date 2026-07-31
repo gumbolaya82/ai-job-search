@@ -4,7 +4,7 @@ import RunBanner from "@/components/RunBanner";
 import Sparkline from "@/components/Sparkline";
 import { SPARK_WEEKS, summarise, timelineForAllProfiles, weeklySeries } from "@/lib/jobsTimeline";
 import { readRegistry } from "@/lib/profileRegistry";
-import { cancelRun, runStatus } from "@/lib/runs/actions";
+import { cancelRun, runStatus, startRank } from "@/lib/runs/actions";
 import { RANK_PHASES } from "@/lib/runs/commandSpec";
 
 /**
@@ -16,9 +16,12 @@ import { RANK_PHASES } from "@/lib/runs/commandSpec";
 export default async function JobsPage() {
   let rows;
   let active: string | null = null;
+  let lock: string | null = null;
   try {
     rows = timelineForAllProfiles();
-    active = readRegistry().active;
+    const registry = readRegistry();
+    active = registry.active;
+    lock = registry.profiles.find((p) => p.id === active)?.lock ?? null;
   } catch (err) {
     return (
       <>
@@ -91,7 +94,7 @@ export default async function JobsPage() {
         </div>
       )}
 
-      <JobsTable rows={rows} />
+      <JobsTable rows={rows} active={active} lock={lock} startRank={startRank} />
 
       <footer className="pvfoot">
         seen_jobs.json ⨝ job_search_tracker.csv · sparklines show the last {SPARK_WEEKS} weeks by
