@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import type { CommandId } from "@/lib/runs/runStore";
 import type { RunStartResult, RunStatus } from "@/lib/runs/actions";
 import PhaseBar from "./PhaseBar";
@@ -60,6 +60,7 @@ export default function RunBanner({ profile, command, labels, initial, onCancel 
   const [result, setResult] = useState<RunStartResult | null>(null);
   const [pending, startTransition] = useTransition();
   const [, forceTick] = useState(0);
+  const lastSyncedRunId = useRef<string | null>(initial.run?.id ?? null);
 
   const run = status.run;
   const isRunning = run?.state === "running";
@@ -82,11 +83,24 @@ export default function RunBanner({ profile, command, labels, initial, onCancel 
   // passive observer — the button that starts /rank lives in JobsTable. That
   // action's `revalidatePath` re-renders the server page with a fresh
   // `initial`, but a mounted client component only reads its `initial` prop
-  // once, on mount. Re-sync only when the run id actually changed, so this
-  // does not clobber a same-run poll result that is already newer than the
-  // server snapshot with a staler one.
+  // once, on mount. Re-sync only when the run id actually changed (tracked in
+  // a ref, not `status`, so this effect never fights the poll's own updates),
+  // so this does not clobber a same-run poll result that is already newer
+  // than the server snapshot with a staler one.
+  //
+  // A new run id also means `stopping` and `result` are stale leftovers from
+  // whatever the previous run's UI was doing — left alone, a `stopping: true`
+  // from a confirm dialog the user never answered would immediately render an
+  // unprompted "Stop run <newId>?" the moment this run starts, exactly the
+  // pattern ScrapePanel.begin() guards against by resetting both alongside
+  // start. Reset them here for the same reason.
   useEffect(() => {
-    setStatus((prev) => (prev.run?.id === initial.run?.id ? prev : initial));
+    const nextId = initial.run?.id ?? null;
+    if (lastSyncedRunId.current === nextId) return;
+    lastSyncedRunId.current = nextId;
+    setStatus(initial);
+    setStopping(false);
+    setResult(null);
   }, [initial]);
 
   // Poll only while something is actually running.

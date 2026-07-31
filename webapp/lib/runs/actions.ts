@@ -26,6 +26,7 @@ import { hasFinished, isAlive } from "./lifecycle";
 import { clearLock } from "./clearLock";
 import { runProgress, type PhaseProgress } from "./progress";
 import { describeLogLines, finalResultCost } from "../scrape/logFormat";
+import { countRanked, type RankedEntries } from "./rankedCount";
 
 /**
  * Starting, watching and cancelling `/rank` — and, generically, any command
@@ -93,7 +94,7 @@ function seenJobsPath(profileId: string): string {
  * `SeenJob` and lib/scrape/seenDiff.ts's `SeenEntry`) rather than growing one
  * shared type nobody fully uses.
  */
-type RankedSeenFile = { seen?: Record<string, { rank_date?: string }> };
+type RankedSeenFile = { seen?: RankedEntries };
 
 function readRankedSeenFile(profileId: string): RankedSeenFile {
   const file = seenJobsPath(profileId);
@@ -124,10 +125,7 @@ const RANK_SPEC: CommandSpec<undefined> = {
   finalise: (run) => {
     const after = readRankedSeenFile(run.profile);
     const day = run.startedAt.slice(0, 10);
-    const rankedCount = Object.values(after.seen ?? {}).filter(
-      (entry) => entry?.rank_date === day,
-    ).length;
-    return { ...run, rankedCount };
+    return { ...run, rankedCount: countRanked(after.seen, day) };
   },
 };
 

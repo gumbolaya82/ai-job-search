@@ -19,6 +19,19 @@ Read `.active-profile` at the repo root and bind `<profile>` to its contents. Ev
 missing, or names a directory that does not exist under `profiles/`, stop and tell
 the user to run `python tools/profile_manager.py list`.
 
+**Then take the lock.** `/rank` rewrites `seen_jobs.json` across potentially many
+scored postings in Step 4; a profile switch partway through would attribute those
+annotations to the wrong profile.
+
+1. If `profiles/<profile>/.lock` already exists, stop. Show its contents and tell the
+   user another command is mid-run against this profile — they should wait for it, or
+   run `python tools/profile_manager.py clear-lock <profile>` if it crashed.
+2. Otherwise write `profiles/<profile>/.lock` with a single line: the current UTC time
+   in ISO-8601 followed by the command name, e.g. `2026-07-26T14:32:00Z /rank`.
+
+Step 6 releases it. If you abort early — no candidates to rank, the user cancelling —
+delete the lock file before you stop.
+
 ---
 
 ## Step 0: Parse Input
@@ -134,6 +147,14 @@ Rules for the presentation:
 - Say explicitly that these are **triage scores from the posting text only**, and that `/apply` will re-evaluate with company research before anything is drafted.
 - Then ask: "Want to apply to any of these? Give me the number(s) and I'll start with the full `/apply` workflow."
 - If the user picks one, run the `/apply` workflow on that job's URL, passing the triage verdict as prior context but **re-running the full Step 1 evaluation** - triage never substitutes for it.
+
+---
+
+## Step 6: Release the Lock
+
+Delete `profiles/<profile>/.lock`. Do this last, after the shortlist is presented, and
+do it even if earlier steps reported problems — a lock left behind blocks every later
+`/scrape` and `/apply` run and forces the user to clear it by hand.
 
 ---
 
