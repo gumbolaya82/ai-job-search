@@ -77,6 +77,18 @@ export default function RunBanner({ profile, command, labels, initial, onCancel 
     }
   }, [profile, command]);
 
+  // Pick up a run this component did not start itself. Unlike ScrapePanel,
+  // whose own `begin()` refreshes right after calling `start`, RunBanner is a
+  // passive observer — the button that starts /rank lives in JobsTable. That
+  // action's `revalidatePath` re-renders the server page with a fresh
+  // `initial`, but a mounted client component only reads its `initial` prop
+  // once, on mount. Re-sync only when the run id actually changed, so this
+  // does not clobber a same-run poll result that is already newer than the
+  // server snapshot with a staler one.
+  useEffect(() => {
+    setStatus((prev) => (prev.run?.id === initial.run?.id ? prev : initial));
+  }, [initial]);
+
   // Poll only while something is actually running.
   useEffect(() => {
     if (!isRunning) return;
