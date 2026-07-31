@@ -1,8 +1,11 @@
 import JobsTable from "@/components/JobsTable";
 import PageHead from "@/components/PageHead";
+import RunBanner from "@/components/RunBanner";
 import Sparkline from "@/components/Sparkline";
 import { SPARK_WEEKS, summarise, timelineForAllProfiles, weeklySeries } from "@/lib/jobsTimeline";
 import { readRegistry } from "@/lib/profileRegistry";
+import { cancelRun, runStatus } from "@/lib/runs/actions";
+import { RANK_PHASES } from "@/lib/runs/commandSpec";
 
 /**
  * Jobs is the landing screen: it is the reason the webapp exists.
@@ -10,7 +13,7 @@ import { readRegistry } from "@/lib/profileRegistry";
  * seen_jobs.json holds everything ever surfaced; the tracker CSV holds only the
  * applied subset. Neither shows the other. This joins them across every profile.
  */
-export default function JobsPage() {
+export default async function JobsPage() {
   let rows;
   let active: string | null = null;
   try {
@@ -34,6 +37,10 @@ export default function JobsPage() {
   const series = weeklySeries(rows);
   const trackerMissing = stats.applied === 0;
 
+  const rankStatus = active
+    ? await runStatus(active, "rank")
+    : { run: null, lines: [], progress: { index: -1, label: null, finished: false } };
+
   const CARDS = [
     { key: "total", label: "Ever surfaced", tone: "var(--accent)" },
     { key: "high", label: "High fit", tone: "var(--high)" },
@@ -50,6 +57,16 @@ export default function JobsPage() {
         active={active}
         placeholder="Search jobs…"
       />
+
+      {active && (
+        <RunBanner
+          profile={active}
+          command="rank"
+          labels={RANK_PHASES.labels}
+          initial={rankStatus}
+          onCancel={cancelRun.bind(null, active, "rank")}
+        />
+      )}
 
       <div className="stats">
         {CARDS.map((card) => (

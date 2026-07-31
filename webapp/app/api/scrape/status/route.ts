@@ -1,31 +1,15 @@
-import { NextResponse } from "next/server";
-import { activeProfileId, resolveProfileId } from "@/lib/profileRegistry";
-import { scrapeStatus } from "@/lib/scrape/runner";
+import { GET as runsStatusGET } from "@/app/api/runs/status/route";
 
 /**
- * Poll target for the run panel: the newest run record plus a formatted log tail.
- *
- * An unresolvable `profile` **refuses**. It does not quietly fall back to the
- * active profile — that fallback is a fixed bug in this codebase, documented on
- * the Documents page, and reintroducing it here would mean a mistyped id
- * silently reports someone else's run. An absent param is a different thing and
- * does mean "the active profile".
+ * `/api/scrape/status` is `/api/runs/status?command=scrape` (the general
+ * route's default), kept as its own URL because `ScrapePanel` already polls
+ * it. See `app/api/runs/status/route.ts` for the profile-resolution logic —
+ * including the comment about why an unresolvable `profile` refuses rather
+ * than falling back to the active one — and everything else this delegates to.
  */
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  const param = new URL(request.url).searchParams.get("profile");
-
-  const profileId = param ? resolveProfileId(param) : activeProfileId();
-  if (!profileId) {
-    return NextResponse.json({ error: "Unknown profile." }, { status: 404 });
-  }
-
-  const status = await scrapeStatus(profileId);
-  return NextResponse.json(
-    { profile: profileId, ...status },
-    // Run state changes every few seconds and carries real job data.
-    { headers: { "Cache-Control": "no-store" } },
-  );
+  return runsStatusGET(request);
 }

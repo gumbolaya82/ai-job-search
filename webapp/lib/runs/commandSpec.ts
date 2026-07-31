@@ -38,3 +38,27 @@ export function buildArgv(prompt: string, allowedTools: string[]): string[] {
     "--verbose",
   ];
 }
+
+/**
+ * `/rank`'s four observable phases, in the order `.claude/commands/rank.md`
+ * performs them: load state, batch-score postings, aggregate the shortlist,
+ * write the results back into `seen_jobs.json`.
+ */
+export const RANK_PHASES: PhaseSet = {
+  labels: ["read seen_jobs", "score postings", "aggregate and rank", "update state"],
+  classify: (name, detail) => {
+    const n = name.toLowerCase();
+    const d = detail.toLowerCase();
+    if (/^(write|edit|multiedit)$/.test(n) && d.includes("seen_jobs.json")) return 3;
+    if (n === "webfetch" || n === "task" || n === "agent") return 1;
+    if (/^read$/.test(n) && d.includes("seen_jobs.json")) return 0;
+    if (/^read$/.test(n) && /job.evaluation|candidate-profile/.test(d)) return 0;
+    return -1;
+  },
+  fromText: (text) => (/job ranking\s*-|shortlist/i.test(text) ? 2 : -1),
+};
+
+/** `/rank` takes no arguments — Step 0 of the command defaults to every `new` posting. */
+export function buildRankPrompt(): string {
+  return "/rank";
+}
