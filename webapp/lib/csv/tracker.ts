@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import { profilePath } from "../repoRoot";
+import { profilePath } from "../repoRoot.ts";
 
 /**
  * Minimal reader for `profiles/<id>/job_search_tracker.csv`.

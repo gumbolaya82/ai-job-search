@@ -1,8 +1,8 @@
 import fs from "node:fs";
-import { profilePath } from "./repoRoot";
-import { readRegistry } from "./profileRegistry";
-import { readTracker, type TrackerRow } from "./csv/tracker";
-import { FIT_RANK, type FitLevel } from "./fitRank";
+import { profilePath } from "./repoRoot.ts";
+import { readRegistry } from "./profileRegistry.ts";
+import { readTracker, type TrackerRow } from "./csv/tracker.ts";
+import { FIT_RANK, type FitLevel } from "./fitRank.ts";
 
 /**
  * The reason this webapp exists.
@@ -36,6 +36,13 @@ export type TimelineRow = {
   /** Present only when the tracker has a matching row. */
   outcome: OutcomeBucket | null;
   outcomeNotes: string;
+  rankScore: number | null;
+  rankVerdict: string | null;
+  rankDate: string;
+  location: string;
+  locationVerdict: string | null;
+  deadline: string | null;
+  expired: boolean;
 };
 
 type SeenJob = {
@@ -46,6 +53,12 @@ type SeenJob = {
   fit?: string;
   status?: string;
   portal?: string;
+  rank_score?: number;
+  rank_verdict?: string;
+  rank_date?: string;
+  location?: string;
+  location_verdict?: string;
+  deadline?: string | null;
 };
 
 const BUCKETS: Record<string, OutcomeBucket> = {
@@ -91,6 +104,30 @@ function asFit(raw: string | undefined): FitLevel {
   return raw === "high" || raw === "medium" ? raw : raw === "low" ? "low" : "low";
 }
 
+/** Bands from 04-job-evaluation.md, as the tones the table paints them. */
+export const VERDICT_TONE: Record<string, string> = {
+  "Strong Fit": "var(--high)",
+  "Good Fit": "var(--st-active)",
+  "Moderate Fit": "var(--medium)",
+  "Weak Fit": "var(--low)",
+  "Poor Fit": "var(--low)",
+};
+
+export function parseRankFields(job: SeenJob) {
+  const score = typeof job.rank_score === "number" && Number.isFinite(job.rank_score)
+    ? job.rank_score
+    : null;
+  return {
+    rankScore: score,
+    rankVerdict: typeof job.rank_verdict === "string" && job.rank_verdict ? job.rank_verdict : null,
+    rankDate: job.rank_date ?? "",
+    location: job.location ?? "",
+    locationVerdict: typeof job.location_verdict === "string" && job.location_verdict ? job.location_verdict : null,
+    deadline: typeof job.deadline === "string" && job.deadline ? job.deadline : null,
+    expired: (job.status ?? "") === "expired",
+  };
+}
+
 export function timelineForProfile(profileId: string): TimelineRow[] {
   const seen = readSeenJobs(profileId);
   const tracker: TrackerRow[] = readTracker(profileId);
@@ -115,6 +152,7 @@ export function timelineForProfile(profileId: string): TimelineRow[] {
       seenStatus: job.status ?? "new",
       outcome: hit ? normaliseStatus(hit.status ?? "") : null,
       outcomeNotes: hit?.notes ?? "",
+      ...parseRankFields(job),
     };
   });
 }
@@ -156,4 +194,4 @@ export function summarise(rows: TimelineRow[]): TimelineStats {
 // Re-exported so callers keep one import for "the jobs timeline"; the weekly
 // bucketing itself lives in a leaf module `node --test` can load. See
 // lib/jobsSeries.ts, and lib/fitRank.ts for the same split.
-export { SPARK_WEEKS, weeklyCounts, weeklySeries, type TimelineSeries } from "./jobsSeries";
+export { SPARK_WEEKS, weeklyCounts, weeklySeries, type TimelineSeries } from "./jobsSeries.ts";

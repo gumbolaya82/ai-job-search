@@ -21,6 +21,13 @@ function job(over: Partial<TimelineRow>): TimelineRow {
     seenStatus: "new",
     outcome: null,
     outcomeNotes: "",
+    rankScore: null,
+    rankVerdict: null,
+    rankDate: "",
+    location: "",
+    locationVerdict: null,
+    deadline: null,
+    expired: false,
     ...over,
   };
 }

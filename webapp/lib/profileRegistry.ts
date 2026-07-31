@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { repoRoot } from "./repoRoot";
+import { repoRoot } from "./repoRoot.ts";
 
 /**
  * Read-only view of the profile list.
