@@ -122,31 +122,36 @@ def run_lint():
     )
 
 
-def test_repo_lints_clean():
-    result = run_lint()
-    assert result.returncode == 0, result.stdout + result.stderr
+class CommandFrontmatterTests(unittest.TestCase):
+    def setUp(self):
+        sys.path.insert(0, str(ROOT / "tools"))
+        import lint_skills
 
+        self.lint_skills = lint_skills
+        self.lint_skills.errors.clear()
 
-def test_command_with_frontmatter_and_no_title_fails(tmp_path, monkeypatch):
-    sys.path.insert(0, str(ROOT / "tools"))
-    import lint_skills
+        # Deliberately outside ROOT (a repo file's rel() would resolve
+        # cleanly) - this is what exercises rel()'s fallback for paths
+        # that aren't under the repo root.
+        tmpdir = tempfile.TemporaryDirectory()
+        self.addCleanup(tmpdir.cleanup)
+        self.tmp_path = Path(tmpdir.name)
 
-    bad = tmp_path / "bogus.md"
-    bad.write_text("---\nallowed-tools: Read\n---\n\nNo title here\n", encoding="utf-8")
-    lint_skills.errors.clear()
-    lint_skills.check_command(bad)
-    assert lint_skills.errors, "a command without a '# /<name>' title must fail"
+    def test_repo_lints_clean(self):
+        result = run_lint()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
+    def test_command_with_frontmatter_and_no_title_fails(self):
+        bad = self.tmp_path / "bogus.md"
+        bad.write_text("---\nallowed-tools: Read\n---\n\nNo title here\n", encoding="utf-8")
+        self.lint_skills.check_command(bad)
+        self.assertTrue(self.lint_skills.errors, "a command without a '# /<name>' title must fail")
 
-def test_command_with_frontmatter_and_title_passes(tmp_path):
-    sys.path.insert(0, str(ROOT / "tools"))
-    import lint_skills
-
-    good = tmp_path / "rank.md"
-    good.write_text("---\nallowed-tools: Read, Task\n---\n\n# /rank - Triage\n", encoding="utf-8")
-    lint_skills.errors.clear()
-    lint_skills.check_command(good)
-    assert not lint_skills.errors, lint_skills.errors
+    def test_command_with_frontmatter_and_title_passes(self):
+        good = self.tmp_path / "rank.md"
+        good.write_text("---\nallowed-tools: Read, Task\n---\n\n# /rank - Triage\n", encoding="utf-8")
+        self.lint_skills.check_command(good)
+        self.assertFalse(self.lint_skills.errors, self.lint_skills.errors)
 
 
 if __name__ == "__main__":
