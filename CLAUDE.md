@@ -12,7 +12,7 @@ read or write**, then read every personal-data path in this file as relative to
 `profiles/<id>/`.
 
 <!-- BEGIN ACTIVE-PROFILE -->
-**Active profile:** `diane` — see [`profiles/diane/CLAUDE.md`](profiles/diane/CLAUDE.md)
+**Active profile:** `dion` — see [`profiles/dion/CLAUDE.md`](profiles/dion/CLAUDE.md)
 <!-- END ACTIVE-PROFILE -->
 
 ```bash
@@ -38,14 +38,34 @@ This repo is a job application workspace. Claude acts as a career advisor and ap
 
 ## Repo Structure
 
+Several directory names exist at BOTH the repo root and under `profiles/<id>/`
+(`cv/`, `cover_letters/`, `documents/`, `job_scraper/`, `reports/`, `upskill/`).
+They do not mean the same thing in the two places. **The root copies are never
+personal data**; the table below says what each root path actually is, so this
+does not have to be re-derived each session.
+
 **Shared by every profile (never holds personal data):**
-- `.claude/commands/` - slash commands
-- `.claude/skills/` - skill definitions and the shared `03`-`07` framework docs
-- `.agents/skills/` - job search CLI tools
-- `templates/` - `/add-template` registrations
-- `cv/main_example.tex`, `cover_letters/{cover.cls,OpenFonts/,cover_example.tex}` - the
-  pristine CI compile fixture and the seed for new profiles. Never personalize these.
-- `tools/`, `salary_lookup.py`
+
+| Root path | What it is |
+|---|---|
+| `.claude/commands/` | slash commands |
+| `.claude/skills/` | Claude Code skills — `job-application-assistant` (plus the shared `03`-`07` framework docs), `job-scraper`, `upskill`. Invoked by Claude directly. |
+| `.agents/skills/` | job-portal **CLI** search tools (`jobindex-`, `jobnet-`, `jobbank-`, `jobdanmark-`, `freehire-`, `linkedin-search`). Each ships a `cli/` the scraper shells out to — not Claude Code skills. |
+| `templates/` | `/add-template` registrations |
+| `cv/main_example.tex` | pristine CI compile fixture **and** the seed `profile_manager.py create` copies. Never personalize. |
+| `cover_letters/{cover.cls,OpenFonts/,cover_example.tex}` | same: CI fixture + create-seed. The only tracked copy of the ~30 font files. Never personalize. |
+| `tools/`, `salary_lookup.py` | Python CLIs. Stdlib-only except `pyyaml` (`tools/lint_skills.py`). Tests import them by top-level name, so **run `pytest` from the repo root**. |
+| `webapp/` | local Next.js app, reads the same flat profile files Claude Code does (`npm run dev` from `webapp/`, http://localhost:3000). Jobs table shows: Fit (scraper), Score/Verdict (from `/rank`), Deadline, Title, Company, **Location** (job location), **Portal** (scraper source: LinkedIn, Indeed, etc), First seen, Status (tracker outcome), Profile. Serves unauthenticated CV/PII over HTTP - never bind beyond 127.0.0.1 |
+| `tests/` | pytest suite (`pytest tests/`) |
+| `scripts/` | `run-email-report.ps1` (gitignored — machine-local) |
+| `documents/` | **tracked skeleton only** (`README.md` + empty `.gitkeep` dirs). Real documents live at `profiles/<id>/documents/`. |
+| `job_scraper/`, `upskill/` | **upstream-template vestige.** Empty `.gitkeep` holders left from the pre-`profiles/` single-profile layout. Nothing in this fork reads or writes them; the live paths are `profiles/<id>/job_scraper/` and `profiles/<id>/upskill/`. Kept only so upstream merges stay clean — do not add files here. |
+| `reports/` | not tracked (gitignored by `**/reports/`). Any root-level content is stale pre-migration output; live reports are at `profiles/<id>/reports/`. |
+
+**Worktrees:** keep git worktrees **outside** this repo (e.g.
+`../ai-job-search-worktrees/<name>`). A worktree nested under `.claude/` is a
+second full checkout inside the tree — it is gitignored, but it doubles every
+`rg`/`find`/pytest scan and shows stale copies of files being edited.
 
 **Per profile, under `profiles/<id>/`:**
 - `CLAUDE.md` - the candidate profile

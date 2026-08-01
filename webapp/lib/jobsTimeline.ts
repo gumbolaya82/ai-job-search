@@ -50,6 +50,7 @@ export type TimelineRow = {
   locationVerdict: string | null;
   deadline: string | null;
   expired: boolean;
+  portal: string;
 };
 
 type SeenJob = {
@@ -150,6 +151,7 @@ export function timelineForProfile(profileId: string): TimelineRow[] {
       seenStatus: job.status ?? "new",
       outcome: hit ? normaliseStatus(hit.status ?? "") : null,
       outcomeNotes: hit?.notes ?? "",
+      portal: job.portal ?? "",
       ...parseRankFields(job),
     };
   });

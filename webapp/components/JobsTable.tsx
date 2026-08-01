@@ -85,17 +85,24 @@ function Chip({
  * and `lock` describe the profile /rank would run against — the same profile
  * ScrapePanel shows a lock alert for — so the button can disable itself and
  * explain why, exactly like ScrapePanel does for Scrape.
+ *
+ * `rankEnabled` is the same flag `startRank` refuses on, passed down from the
+ * server so there is one source of truth rather than a second copy here. This
+ * is only the tooltip and the greyed-out button; the refusal that matters is
+ * the one in the server action.
  */
 export default function JobsTable({
   rows,
   active,
   lock,
   startRank,
+  rankEnabled,
 }: {
   rows: TimelineRow[];
   active: string | null;
   lock: string | null;
   startRank: (profileId: string) => Promise<RunStartResult>;
+  rankEnabled: boolean;
 }) {
   const { query, setQuery } = useUi();
   // Low fit is the majority of most runs and the least useful of it, so the
@@ -137,7 +144,9 @@ export default function JobsTable({
       return (
         r.title.toLowerCase().includes(q) ||
         r.company.toLowerCase().includes(q) ||
-        r.profile.toLowerCase().includes(q)
+        r.profile.toLowerCase().includes(q) ||
+        r.location.toLowerCase().includes(q) ||
+        r.portal.toLowerCase().includes(q)
       );
     });
     // Once /rank has touched anything visible, score is the more useful order;
@@ -170,14 +179,20 @@ export default function JobsTable({
     setQuery("");
   }
 
-  const rankTitle = !active
-    ? "No active profile selected."
-    : lock
-      ? `${active} is locked by an in-progress command:\n${lock}`
-      : unrankedCount === 0
-        ? `No unranked new jobs for ${active}.`
-        : `Rank ${unrankedCount} new job${unrankedCount === 1 ? "" : "s"} for ${active}.`;
-  const rankDisabled = rankPending || !active || Boolean(lock) || unrankedCount === 0;
+  // The disabled reason is checked before every other one: a user hovering a
+  // dead button wants to know it is off on purpose, not to be told which
+  // profile is active.
+  const rankTitle = !rankEnabled
+    ? "Ranking is turned off — a full run costs roughly $8. Set AI_JOB_SEARCH_RANK=1 to re-enable it, or run /rank in Claude Code by hand."
+    : !active
+      ? "No active profile selected."
+      : lock
+        ? `${active} is locked by an in-progress command:\n${lock}`
+        : unrankedCount === 0
+          ? `No unranked new jobs for ${active}.`
+          : `Rank ${unrankedCount} new job${unrankedCount === 1 ? "" : "s"} for ${active}.`;
+  const rankDisabled =
+    !rankEnabled || rankPending || !active || Boolean(lock) || unrankedCount === 0;
 
   function beginRank() {
     if (!active) return;
@@ -283,6 +298,8 @@ export default function JobsTable({
               <th>Deadline</th>
               <th>Title</th>
               <th>Company</th>
+              <th>Location</th>
+              <th>Portal</th>
               <th>First seen</th>
               <th>Status</th>
               <th>Profile</th>
@@ -323,14 +340,13 @@ export default function JobsTable({
                     )}
                   </td>
                   <td>{r.company}</td>
+                  <td className="meta">{r.location || "—"}</td>
+                  <td className="meta">{r.portal || "—"}</td>
                   <td className="meta">{r.firstSeen || "—"}</td>
                   <td>
                     <Pill label={status} color={STATUS_VAR[status] ?? "var(--st-none)"} />
                   </td>
-                  <td className="meta">
-                    {r.profile}
-                    {r.location ? ` · ${r.location}` : ""}
-                  </td>
+                  <td className="meta">{r.profile}</td>
                   <td>
                     <CopyCommand command={`/apply ${r.url}`} label="/apply" />
                   </td>
@@ -339,7 +355,7 @@ export default function JobsTable({
             })}
             {shown.length === 0 && (
               <tr>
-                <td colSpan={10} style={{ padding: "var(--pad)" }}>
+                <td colSpan={12} style={{ padding: "var(--pad)" }}>
                   {rows.length === 0 ? (
                     <EmptyState
                       title="No jobs have been surfaced yet"
