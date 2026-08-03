@@ -24,6 +24,7 @@ import {
 import { spawnDetached } from "./spawnRun";
 import { hasFinished, isAlive } from "./lifecycle";
 import { clearLock } from "./clearLock";
+import { rankEnabled } from "./rankEnabled";
 import { runProgress, type PhaseProgress } from "./progress";
 import { describeLogLines, finalResultCost } from "../scrape/logFormat";
 import { countRanked, type RankedEntries } from "./rankedCount";
@@ -141,6 +142,22 @@ type RunSpec = Omit<CommandSpec<never>, "buildPrompt">;
 const SPECS: Partial<Record<CommandId, RunSpec>> = { rank: RANK_SPEC };
 
 export async function startRank(profileId: string): Promise<RunStartResult> {
+  // The button JobsTable renders is disabled from the same flag, but this is a
+  // server action — a POST endpoint — so a disabled button is decoration. This
+  // is the check that actually stops a run being spawned, whether the caller is
+  // a stale tab, a replayed request or a future code path.
+  if (!rankEnabled()) {
+    return {
+      ok: false,
+      message:
+        "/rank is disabled: a full-backlog run costs roughly $8, and the last one spent $7.91 " +
+        "and ranked nothing before hitting a session limit. Set AI_JOB_SEARCH_RANK=1 to " +
+        "re-enable it, or run /rank in Claude Code by hand.",
+      locked: false,
+      runId: null,
+    };
+  }
+
   const resolved = resolveProfileId(profileId);
   if (!resolved) {
     return { ok: false, message: `No live profile named '${profileId}'.`, locked: false, runId: null };

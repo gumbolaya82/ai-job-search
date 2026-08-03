@@ -22,8 +22,9 @@ import { summarise, timelineForProfile, weeklySeries } from "@/lib/jobsTimeline"
  * The two formats render through two different modules. `.eml` carries
  * `renderDigest`'s email body — inline-styled, light, table-laid-out, because
  * mail clients demand it. `?format=html` is only ever opened in a browser, so it
- * gets `renderReport`: the dashboard's dark theme, plus the profile's all-time
- * stat cards and sparklines above the run's table. The route keeps its `eml/`
+ * gets `renderReport`: the dashboard's dark theme, plus a strip of the run's own
+ * facts and the profile's all-time stat cards and sparklines above the run's
+ * table. The route keeps its `eml/`
  * path so the existing download URL does not break; the format is a parameter
  * rather than a sibling route so profile and run-id validation cannot drift
  * between the two.
@@ -77,7 +78,15 @@ export async function GET(request: Request) {
     // run would give the sparklines one bucket and nothing to show. The table
     // below stays the run's new jobs.
     const all = timelineForProfile(profileId);
-    const report = renderReport(run.newJobs, meta, summarise(all), weeklySeries(all));
+    // The page's facts strip states the run itself — id, duration, cost — which
+    // the email body has no use for, so those three ride alongside `meta`
+    // rather than inside the shared `DigestMeta`.
+    const report = renderReport(
+      run.newJobs,
+      { ...meta, runId: run.id, endedAt: run.endedAt, costUsd: run.costUsd },
+      summarise(all),
+      weeklySeries(all),
+    );
     // No candidate-email lookup on this path — an HTML page has no recipient.
     return new NextResponse(report, {
       status: 200,

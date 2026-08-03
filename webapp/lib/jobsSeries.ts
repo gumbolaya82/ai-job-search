@@ -65,3 +65,82 @@ export function weeklySeries(rows: TimelineRow[], now: Date = new Date()): Timel
     applied: by((r) => r.outcome !== null),
   };
 }
+
+/** One portal's volume, split by fit. `portal` is the raw `seen_jobs.json` value. */
+export type PortalFit = {
+  portal: string;
+  label: string;
+  total: number;
+  high: number;
+  medium: number;
+  low: number;
+};
+
+/**
+ * Portal values are CLI skill names — `linkedin-search`, `freehire-search` —
+ * so the trailing `-search` is noise in a chart axis. Known brands get their
+ * own casing; anything else is capitalised rather than guessed at, and an
+ * absent portal is named instead of rendering as a gap.
+ */
+const PORTAL_NAMES: Record<string, string> = {
+  linkedin: "LinkedIn",
+  jobindex: "Jobindex",
+  jobnet: "Jobnet",
+  jobbank: "Jobbank",
+  jobdanmark: "JobDanmark",
+  freehire: "Freehire",
+  indeed: "Indeed",
+};
+
+export function portalLabel(raw: string): string {
+  const base = raw.trim().replace(/[-_]?search$/i, "");
+  if (!base) return "Unknown portal";
+  const key = base.toLowerCase();
+  return PORTAL_NAMES[key] ?? key.charAt(0).toUpperCase() + key.slice(1);
+}
+
+/**
+ * Volume and fit mix per portal, biggest first.
+ *
+ * This is what makes the report answer "which portal is worth keeping" rather
+ * than only "how many jobs turned up" — a portal that returns forty low-fit
+ * rows and one that returns four high-fit ones look identical in a bare count.
+ *
+ * An empty input returns an empty array; every caller must render that as a
+ * stated empty state, because there is no meaningful zero-portal chart.
+ */
+export function portalBreakdown(rows: readonly TimelineRow[]): PortalFit[] {
+  const by = new Map<string, PortalFit>();
+  for (const row of rows) {
+    const portal = row.portal ?? "";
+    let bucket = by.get(portal);
+    if (!bucket) {
+      bucket = { portal, label: portalLabel(portal), total: 0, high: 0, medium: 0, low: 0 };
+      by.set(portal, bucket);
+    }
+    bucket.total += 1;
+    bucket[row.fit] += 1;
+  }
+  return [...by.values()].sort(
+    (a, b) => b.total - a.total || a.label.localeCompare(b.label),
+  );
+}
+
+/**
+ * The portal that produced the best jobs, not the most jobs.
+ *
+ * High-fit count decides it; medium breaks the tie, then volume, then the
+ * label so the answer is stable across runs. `null` when there are no rows —
+ * callers phrase that case themselves rather than being handed a fake winner.
+ */
+export function bestPortal(rows: readonly TimelineRow[]): PortalFit | null {
+  const buckets = portalBreakdown(rows);
+  if (buckets.length === 0) return null;
+  return [...buckets].sort(
+    (a, b) =>
+      b.high - a.high ||
+      b.medium - a.medium ||
+      b.total - a.total ||
+      a.label.localeCompare(b.label),
+  )[0];
+}

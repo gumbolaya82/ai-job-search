@@ -54,6 +54,61 @@ export type RunRecord = {
   rankedCount?: number;
 };
 
+/**
+ * One row of the run-history list: everything it renders, and nothing else.
+ *
+ * Deliberately drops `newJobs`, `seenKeysBefore` and the log. A history of ten
+ * runs would otherwise ship ten full job tables to the browser to render ten
+ * counts, and those rows are untrusted posting text the list never displays —
+ * the digest route is where they get escaped and served.
+ */
+export type RunSummary = {
+  id: string;
+  profile: string;
+  startedAt: string;
+  endedAt: string | null;
+  state: RunState;
+  /** `null` means the diff was never persisted — running, or died mid-run. */
+  newJobCount: number | null;
+  costUsd: number | null;
+  focus: string;
+  broad: boolean;
+};
+
+export function runSummary(record: RunRecord): RunSummary {
+  return {
+    id: record.id,
+    profile: record.profile,
+    startedAt: record.startedAt,
+    endedAt: record.endedAt ?? null,
+    state: record.state,
+    newJobCount: record.newJobs === null || record.newJobs === undefined ? null : record.newJobs.length,
+    costUsd: record.costUsd ?? null,
+    focus: record.args?.focus ?? "",
+    broad: record.args?.broad ?? false,
+  };
+}
+
+/**
+ * Every readable run for a profile, newest first.
+ *
+ * An unreadable `run.json` is skipped rather than thrown: a run killed mid-write
+ * must not take the whole history down with it.
+ */
+export function listRunSummariesFor(
+  storage: RunStorage,
+  profileId: string,
+  limit = 50,
+): RunSummary[] {
+  const out: RunSummary[] = [];
+  for (const id of listRunIdsFor(storage, profileId)) {
+    if (out.length >= limit) break;
+    const record = readRunFor(storage, profileId, id);
+    if (record) out.push(runSummary(record));
+  }
+  return out;
+}
+
 /** Records predate the `command` field; every one of them is a scrape. */
 export function withCommandDefault(record: RunRecord): RunRecord {
   return record.command ? record : { ...record, command: "scrape" };

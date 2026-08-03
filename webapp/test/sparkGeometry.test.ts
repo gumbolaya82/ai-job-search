@@ -33,6 +33,18 @@ test("the series is scaled to its own max, so the peak touches the top pad", () 
   assert.equal(Number(peak), SPARK_PAD);
 });
 
+test("last is the final point, so a renderer can mark where the curve ends", () => {
+  const geo = sparkGeometry([0, 0, 40]);
+  assert.ok(geo);
+  assert.equal(geo.last.x, SPARK_W - SPARK_PAD);
+  assert.equal(geo.last.y, SPARK_PAD, "the peak is the last point here, so it sits at the top pad");
+
+  const flat = sparkGeometry([0, 0, 0, 0, 0, 0, 0]);
+  assert.ok(flat);
+  assert.equal(flat.last.y, SPARK_H - SPARK_PAD, "an all-zero series ends on the baseline");
+  assert.ok(Number.isFinite(flat.last.x) && Number.isFinite(flat.last.y));
+});
+
 test("the area closes on the baseline at both ends", () => {
   const geo = sparkGeometry([1, 2]);
   assert.ok(geo);

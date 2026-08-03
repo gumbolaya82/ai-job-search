@@ -7,6 +7,7 @@ import {
   isValidRunId,
   latestRunFor,
   listRunIdsFor,
+  listRunSummariesFor,
   logPathFor,
   readAllLogLinesFor,
   readRunFor,
@@ -17,6 +18,7 @@ import {
   type RunRecord,
   type RunState,
   type RunStorage,
+  type RunSummary,
 } from "../runs/runStore.ts";
 
 // Moved to lib/runs/runStore.ts once /rank and /apply also needed a run store,
@@ -25,7 +27,7 @@ import {
 // here under its original names because this module's public surface is what
 // runner.ts and the `.eml` route already import.
 
-export type { RunRecord, RunState };
+export type { RunRecord, RunState, RunSummary };
 
 const SCRAPE: RunStorage = { subdir: "scrape-runs", logName: "scrape.log" };
 
@@ -48,6 +50,9 @@ export const readRun = (profileId: string, runId: string): RunRecord | null =>
 export const writeRun = (record: RunRecord): void => writeRunFor(SCRAPE, record);
 
 export const latestRun = (profileId: string): RunRecord | null => latestRunFor(SCRAPE, profileId);
+
+export const listRunSummaries = (profileId: string, limit?: number): RunSummary[] =>
+  listRunSummariesFor(SCRAPE, profileId, limit);
 
 export const readAllLogLines = (profileId: string, runId: string): string[] =>
   readAllLogLinesFor(SCRAPE, profileId, runId);

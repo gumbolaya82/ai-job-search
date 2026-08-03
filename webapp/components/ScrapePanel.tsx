@@ -2,11 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import type { ProfileRecord } from "@/lib/profileRegistry";
+import { RUN_STATE_LABEL, fmtDuration, runStateColor } from "@/lib/runs/display";
 import { SCRAPE_PHASES } from "@/lib/scrape/logFormat";
 import type { ScrapeStartResult, ScrapeStatus } from "@/lib/scrape/runner";
 import EmptyState from "./EmptyState";
 import FitMeter from "./FitMeter";
 import PhaseBar from "./PhaseBar";
+import RunHistory from "./RunHistory";
 
 /**
  * The one screen in this app that spends money and writes to the repo.
@@ -41,22 +43,6 @@ type Props = {
 };
 
 const POLL_MS = 2000;
-
-function fmtDuration(fromIso: string, toIso: string | null): string {
-  const start = Date.parse(fromIso);
-  const end = toIso ? Date.parse(toIso) : Date.now();
-  if (!Number.isFinite(start) || !Number.isFinite(end)) return "—";
-  const secs = Math.max(0, Math.round((end - start) / 1000));
-  const mins = Math.floor(secs / 60);
-  return mins > 0 ? `${mins}m ${secs % 60}s` : `${secs}s`;
-}
-
-const STATE_LABEL: Record<string, string> = {
-  running: "running",
-  done: "finished",
-  failed: "failed",
-  cancelled: "cancelled",
-};
 
 export default function ScrapePanel({ profiles, active, preselect, initial, actions }: Props) {
   const live = profiles.filter((p) => !p.archived);
@@ -135,8 +121,8 @@ export default function ScrapePanel({ profiles, active, preselect, initial, acti
           <div className="cardhead">
             <h2>Last run</h2>
             <span className="spacer" />
-            <span className={`pill ${run.state}`} style={{ ["--pc" as string]: stateColor(run.state) }}>
-              {STATE_LABEL[run.state] ?? run.state}
+            <span className={`pill ${run.state}`} style={{ ["--pc" as string]: runStateColor(run.state) }}>
+              {RUN_STATE_LABEL[run.state] ?? run.state}
             </span>
           </div>
           <div className="runfacts">
@@ -386,13 +372,13 @@ export default function ScrapePanel({ profiles, active, preselect, initial, acti
           )}
         </section>
       )}
+
+      {/*
+        Keyed off the live run's id and state so a run that just finished shows
+        up here as "finished" without a reload — the list is a snapshot, unlike
+        the polled card above.
+      */}
+      {selected && <RunHistory profile={selected} refreshKey={`${run?.id ?? ""}:${run?.state ?? ""}`} />}
     </>
   );
-}
-
-function stateColor(state: string): string {
-  if (state === "done") return "var(--st-hired)";
-  if (state === "failed") return "var(--st-rejected)";
-  if (state === "cancelled") return "var(--st-none)";
-  return "var(--st-active)";
 }

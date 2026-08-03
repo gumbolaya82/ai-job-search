@@ -27,10 +27,15 @@ export const SPARK_PAD = 2;
  *
  * A single point is `null`, not a dot: `preserveAspectRatio="none"` would
  * render any round mark as an ellipse, and one week is not a trend.
+ *
+ * `last` is the final point's coordinate, so a renderer can mark where the
+ * curve ends. Emitting it here rather than re-deriving it from the `line`
+ * string is the same rule the rest of this module follows: one place does the
+ * arithmetic, both renderers read it.
  */
 export function sparkGeometry(
   points: readonly number[],
-): { line: string; area: string } | null {
+): { line: string; area: string; last: { x: number; y: number } } | null {
   if (points.length < 2) return null;
 
   const max = Math.max(...points, 1);
@@ -39,6 +44,7 @@ export function sparkGeometry(
   const coords = points.map((v, i) => [SPARK_PAD + i * step, y(v)] as const);
   const line = coords.map(([x, yy]) => `${x.toFixed(1)},${yy.toFixed(1)}`).join(" ");
   const area = `${SPARK_PAD},${SPARK_H} ${line} ${(SPARK_W - SPARK_PAD).toFixed(1)},${SPARK_H}`;
+  const [lx, ly] = coords[coords.length - 1];
 
-  return { line, area };
+  return { line, area, last: { x: lx, y: ly } };
 }

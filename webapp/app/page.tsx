@@ -6,6 +6,7 @@ import { SPARK_WEEKS, summarise, timelineForAllProfiles, weeklySeries } from "@/
 import { readRegistry } from "@/lib/profileRegistry";
 import { cancelRun, runStatus, startRank } from "@/lib/runs/actions";
 import { RANK_PHASES } from "@/lib/runs/commandSpec";
+import { rankEnabled } from "@/lib/runs/rankEnabled";
 
 /**
  * Jobs is the landing screen: it is the reason the webapp exists.
@@ -94,7 +95,13 @@ export default async function JobsPage() {
         </div>
       )}
 
-      <JobsTable rows={rows} active={active} lock={lock} startRank={startRank} />
+      <JobsTable
+        rows={rows}
+        active={active}
+        lock={lock}
+        startRank={startRank}
+        rankEnabled={rankEnabled()}
+      />
 
       <footer className="pvfoot">
         seen_jobs.json ⨝ job_search_tracker.csv · sparklines show the last {SPARK_WEEKS} weeks by

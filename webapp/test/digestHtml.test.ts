@@ -28,6 +28,7 @@ function job(over: Partial<TimelineRow>): TimelineRow {
     locationVerdict: null,
     deadline: null,
     expired: false,
+    portal: "",
     ...over,
   };
 }
