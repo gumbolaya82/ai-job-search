@@ -150,6 +150,40 @@ Postings are treated as untrusted input (the workflow follows no instructions em
 
 `/reset` is also available, see [Starting over](#starting-over) below.
 
+## Web app (optional)
+
+`webapp/` is a local Next.js app for browsing what the commands produce:
+
+```bash
+cd webapp && npm install && npm run dev    # http://localhost:3000
+```
+
+**Jobs** merges every job ever surfaced (`job_scraper/seen_jobs.json`, any status)
+with the applied subset from `job_search_tracker.csv`, across every profile, in one
+table — a view neither file gives you alone. **Scrape** starts a real `/scrape` and,
+when it finishes, offers that run's new jobs as a downloadable `.eml` digest.
+**Profiles** creates, activates, archives and restores profiles. **Documents**
+browses and opens a profile's CVs, cover letters and reports.
+
+Rules it does not break:
+
+- **`/apply` and `/outcome` stay in Claude Code.** They depend on the reviewer
+  sub-agent and the verification checklist, which need a human in the session.
+  Where a screen would want to start one, it hands you the command to paste.
+- **Every mutation shells out to `tools/profile_manager.py`.** Nothing about
+  profile management is reimplemented in TypeScript.
+
+The Scrape screen is the one place that starts an agent: it spawns a headless
+`claude -p "/job-scraper"` under the tool allowlist read from that skill's own
+`SKILL.md`. Each click costs a few minutes and real API tokens, and it points an
+agent with write access at untrusted job-posting text — the allowlist is what
+bounds that. The trust boundary is spelled out in
+[`webapp/README.md`](webapp/README.md). Nothing in this repo can send email, so
+the digest is a draft file you open and send yourself.
+
+It serves personal data over HTTP with no authentication, so it is localhost-only
+by design — never bind it to `0.0.0.0`. See [`webapp/README.md`](webapp/README.md).
+
 ## File structure
 
 ```
