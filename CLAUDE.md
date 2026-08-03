@@ -12,7 +12,7 @@ read or write**, then read every personal-data path in this file as relative to
 `profiles/<id>/`.
 
 <!-- BEGIN ACTIVE-PROFILE -->
-**Active profile:** `dion` — see [`profiles/dion/CLAUDE.md`](profiles/dion/CLAUDE.md)
+**Active profile:** `_scaffold` — see [`profiles/_scaffold/CLAUDE.md`](profiles/_scaffold/CLAUDE.md)
 <!-- END ACTIVE-PROFILE -->
 
 ```bash
