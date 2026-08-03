@@ -73,6 +73,31 @@ jobs:
       - name: Profile isolation smoke test
         run: python tools/smoke_test_profiles.py
 
+  webapp-tests:
+    name: Webapp tests and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          # Node 22.6+ strips TypeScript natively, which is how `npm test` runs
+          # the .ts test files with no transpiler and no extra dependency.
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: webapp/package-lock.json
+      - name: Install
+        working-directory: webapp
+        # `npm ci --ignore-scripts` keeps a dependency's install hook from
+        # executing in CI. security_guards.py polices our own manifests; this
+        # covers the transitive tree those manifests pull in.
+        run: npm ci --ignore-scripts
+      - name: Unit tests (sectionEditor)
+        working-directory: webapp
+        run: npm test
+      - name: Production build
+        working-directory: webapp
+        run: npm run build
+
   dependency-review:
     name: Dependency review (upstream PRs only)
     # Requires the repo's Dependency graph, which forks never inherit and

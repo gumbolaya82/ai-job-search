@@ -169,11 +169,18 @@ def check_gitignore() -> None:
 
 
 def check_package_manifests() -> None:
-    manifests = [
+    agent_manifests = [
         p for p in ROOT.glob(".agents/**/package.json") if "node_modules" not in p.parts
     ]
-    if not manifests:
+    if not agent_manifests:
         errors.append(".agents: no package.json files found - glob roots are wrong or the tree moved")
+    # webapp/ ships its own manifest and installs a full Next.js dependency tree
+    # on every fork user's machine, so it gets the same lifecycle-script rules.
+    # Its absence is not an error: the webapp is optional, unlike .agents/.
+    webapp_manifests = [
+        p for p in ROOT.glob("webapp/package.json") if "node_modules" not in p.parts
+    ]
+    manifests = agent_manifests + webapp_manifests
     for manifest in manifests:
         relpath = manifest.relative_to(ROOT)
         try:

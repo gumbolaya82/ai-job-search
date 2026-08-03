@@ -207,6 +207,55 @@ class ManifestGuardTests(GuardRepoFixture):
         self.assertIn("no package.json files found", result.stdout)
 
 
+class WebappManifestGuardTests(GuardRepoFixture):
+    """webapp/package.json installs a full Next.js tree on every fork user's
+    machine, so it is held to the same lifecycle-script rules as .agents/."""
+
+    def webapp_manifest(self):
+        path = self.root / "webapp" / "package.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return path
+
+    def test_each_lifecycle_script_fails_in_webapp(self):
+        path = self.webapp_manifest()
+        for script in sorted(security_guards.FORBIDDEN_SCRIPTS):
+            with self.subTest(script=script):
+                # Benign value, for the same AV-heuristic reason as above.
+                self.write_manifest(
+                    {"name": "webapp", "scripts": {script: "echo test"}}, path=path
+                )
+                result = run_guards(self.root)
+                self.assertEqual(result.returncode, 1)
+                self.assertIn("lifecycle script", result.stdout)
+                self.assertIn(script, result.stdout)
+
+    def test_benign_webapp_manifest_passes(self):
+        self.write_manifest(
+            {
+                "name": "webapp",
+                "scripts": {"dev": "next dev", "build": "next build", "test": "node --test"},
+            },
+            path=self.webapp_manifest(),
+        )
+        result = run_guards(self.root)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_absent_webapp_is_not_an_error(self):
+        # Unlike .agents/, the webapp is optional. A repo without one must pass.
+        self.assertFalse((self.root / "webapp").exists())
+        result = run_guards(self.root)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_webapp_node_modules_manifests_are_ignored(self):
+        nested = self.root / "webapp" / "node_modules" / "some-dep" / "package.json"
+        nested.parent.mkdir(parents=True)
+        self.write_manifest(
+            {"name": "some-dep", "scripts": {"postinstall": "echo test"}}, path=nested
+        )
+        result = run_guards(self.root)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+
 class RealRepoTests(unittest.TestCase):
     def test_guards_pass_on_this_repo(self):
         # The live check CI runs: the actual repo tree must satisfy its own guards.
